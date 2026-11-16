@@ -2,6 +2,7 @@
 <?= $this->section('content') ?>
 <p>Hourly rates are listed per resource unit. Status describes operational condition; time-slot availability will be checked when reservations are introduced.</p>
 <?php if ($admin): ?><p><a class="button" href="<?= site_url('admin/resources/new') ?>">Create resource</a></p><?php endif ?>
+<?php if (!$admin): ?><p><a class="button" href="<?= site_url('borrower/reservations/new') ?>">Create reservation</a></p><?php endif ?>
 <form method="get" action="<?= site_url($admin ? 'admin/resources' : 'borrower/resources') ?>" class="filters">
     <label>Search<input type="search" name="q" maxlength="150" value="<?= esc($filters['q'], 'attr') ?>" placeholder="Name, description, or location"></label>
     <label>Type<select name="resource_type"><option value="">All types</option><?php foreach (['facility', 'equipment'] as $type): ?><option value="<?= $type ?>" <?= $filters['resource_type'] === $type ? 'selected' : '' ?>><?= ucfirst($type) ?></option><?php endforeach ?></select></label>

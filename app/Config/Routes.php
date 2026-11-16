@@ -30,3 +30,17 @@ $routes->group('borrower/resources', ['filter' => ['nostore', 'authenticated:bor
     $routes->get('', 'ResourceController::catalog');
     $routes->get('(:num)', 'ResourceController::show/$1');
 });
+
+$routes->group('borrower/reservations', ['filter' => ['nostore', 'authenticated:borrower', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('', 'ReservationController::index');
+    $routes->get('new', 'ReservationController::create');
+    $routes->post('preview', 'ReservationController::preview');
+    $routes->post('', 'ReservationController::store');
+    $routes->get('(:num)', 'ReservationController::show/$1');
+    $routes->post('(:num)/cancel', 'ReservationController::cancel/$1');
+});
+$routes->group('admin/reservations', ['filter' => ['nostore', 'authenticated:admin', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('', 'ReservationController::adminIndex');
+    $routes->get('(:num)', 'ReservationController::adminShow/$1');
+    $routes->post('(:num)/decision', 'ReservationController::decide/$1');
+});

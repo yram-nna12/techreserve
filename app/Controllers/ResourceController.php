@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Models\ResourceModel;
 use App\Services\ResourceService;
+use App\Services\ResourceBookingGuard;
+use DomainException;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
 class ResourceController extends BaseController
@@ -62,8 +64,10 @@ class ResourceController extends BaseController
             return redirect()->to(site_url('admin/resources/' . $id . '/archive'))
                 ->with('error', 'Confirm that you want to archive this resource.');
         }
-        if (!(new ResourceModel())->delete($id)) {
-            return redirect()->to(site_url('admin/resources/' . $id))->with('error', 'The resource could not be archived.');
+        try {
+            (new ResourceBookingGuard())->change($id, null);
+        } catch (DomainException $exception) {
+            return redirect()->to(site_url('admin/resources/' . $id))->with('error', $exception->getMessage());
         }
         return redirect()->to(site_url('admin/resources'))->with('success', 'Resource archived. Its stored record has been preserved.');
     }
@@ -133,7 +137,16 @@ class ResourceController extends BaseController
             return $this->response->setStatusCode(422)->setBody($this->form($resource, $errors));
         }
         $model = new ResourceModel();
-        $saved = $existing ? $model->update($existing['id'], $data) : $model->insert($data);
+        if ($existing) {
+            try {
+                (new ResourceBookingGuard())->change((int) $existing['id'], $data);
+                $saved = true;
+            } catch (DomainException $exception) {
+                return $this->response->setStatusCode(422)->setBody($this->form($data + ['id' => $existing['id']], ['booking' => $exception->getMessage()]));
+            }
+        } else {
+            $saved = $model->insert($data);
+        }
         if ($saved === false) {
             return $this->response->setStatusCode(503)->setBody('The resource could not be saved. Please try again later.');
         }

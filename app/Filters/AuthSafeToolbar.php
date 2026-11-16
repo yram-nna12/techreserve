@@ -13,7 +13,7 @@ class AuthSafeToolbar extends DebugToolbar
         $path = trim($request->getUri()->getPath(), '/');
         $path = preg_replace('#^index\.php/#', '', $path);
         if (in_array($path, ['register', 'login', 'logout', 'borrower/dashboard', 'admin/dashboard'], true)
-            || preg_match('#^(admin|borrower)/resources(?:/|$)#', $path)) {
+            || preg_match('#^(admin|borrower)/(resources|reservations)(?:/|$)#', $path)) {
             // Do not persist form values, identity data, or password-hash queries.
             return null;
         }
