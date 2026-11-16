@@ -14,3 +14,19 @@ $routes->group('', ['filter' => 'nostore'], static function (RouteCollection $ro
     $routes->get('borrower/dashboard', 'DashboardController::borrower', ['filter' => ['authenticated:borrower', 'csrf']]);
     $routes->get('admin/dashboard', 'DashboardController::admin', ['filter' => ['authenticated:admin', 'csrf']]);
 });
+
+$routes->group('admin/resources', ['filter' => ['nostore', 'authenticated:admin', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('', 'ResourceController::adminIndex');
+    $routes->get('new', 'ResourceController::create');
+    $routes->post('', 'ResourceController::store');
+    $routes->get('(:num)/edit', 'ResourceController::edit/$1');
+    $routes->post('(:num)/edit', 'ResourceController::update/$1');
+    $routes->get('(:num)/archive', 'ResourceController::archiveForm/$1');
+    $routes->post('(:num)/archive', 'ResourceController::archive/$1');
+    $routes->get('(:num)', 'ResourceController::adminShow/$1');
+});
+
+$routes->group('borrower/resources', ['filter' => ['nostore', 'authenticated:borrower', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('', 'ResourceController::catalog');
+    $routes->get('(:num)', 'ResourceController::show/$1');
+});

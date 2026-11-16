@@ -15,7 +15,7 @@ foreach ([
     }
 }
 $prefix = (string) getenv('AUTH_TEST_DB_PREFIX');
-if (!preg_match('/\Aphase2_test_[a-f0-9]{12}_\z/', $prefix)
+if (!preg_match('/\A(?:phase2_test_|p3_)[a-f0-9]{12}_\z/', $prefix)
     || ($_ENV['database.default.DBPrefix'] ?? '') !== $prefix) {
     http_response_code(500);
     exit('Isolated test database configuration missing; request refused.');
