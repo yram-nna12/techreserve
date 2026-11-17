@@ -167,22 +167,19 @@ class Database extends Config
         'hostname'    => '127.0.0.1',
         'username'    => '',
         'password'    => '',
-        'database'    => ':memory:',
-        'DBDriver'    => 'SQLite3',
-        'DBPrefix'    => 'db_',  // Needed to ensure we're working correctly with prefixes live. DO NOT REMOVE FOR CI DEVS
+        'database'    => 'techreserve_test_db',
+        'DBDriver'    => 'MySQLi',
+        'DBPrefix'    => 'tr_test_',
         'pConnect'    => false,
         'DBDebug'     => true,
-        'charset'     => 'utf8',
-        'DBCollat'    => '',
+        'charset'     => 'utf8mb4',
+        'DBCollat'    => 'utf8mb4_general_ci',
         'swapPre'     => '',
         'encrypt'     => false,
         'compress'    => false,
         'strictOn'    => true,
         'failover'    => [],
         'port'        => 3306,
-        'foreignKeys' => true,
-        'busyTimeout' => 1000,
-        'synchronous' => null,
         'dateFormat'  => [
             'date'     => 'Y-m-d',
             'datetime' => 'Y-m-d H:i:s',
@@ -193,6 +190,9 @@ class Database extends Config
     public function __construct()
     {
         parent::__construct();
+        $this->tests['hostname'] = (string) env('database.tests.hostname', '127.0.0.1');
+        $this->tests['username'] = (string) env('database.tests.username', '');
+        $this->tests['password'] = (string) env('database.tests.password', '');
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that

@@ -30,6 +30,33 @@
 # DATABASE
 #--------------------------------------------------------------------
 
+# Isolated PHPUnit MySQL database. The test schema name is fixed in
+# app/Config/Database.php and cannot fall back to the development database.
+database.tests.hostname = 127.0.0.1
+database.tests.username =
+database.tests.password =
+
+# Mock Payment Gateway server-to-server connection. Set the API key only in
+# the local ignored .env; never commit its value.
+paymentGateway.baseUrl = http://127.0.0.1:8082
+paymentGateway.apiKey =
+
+# Phase 6 notifications are disabled by default until the additive migration is approved.
+notifications.enabled = false
+notifications.emailDeliveryEnabled = false
+
+# Configure SMTP only after approval; keep actual credentials in the ignored local .env.
+# email.protocol = smtp
+# email.fromEmail =
+# email.fromName = TechReserve
+# email.SMTPHost =
+# email.SMTPPort = 587
+# email.SMTPUser =
+# email.SMTPPass =
+# email.SMTPCrypto = tls
+# email.SMTPAuthMethod = login
+# email.SMTPTimeout = 10
+
 # database.default.hostname = localhost
 # database.default.database = ci4
 # database.default.username = root

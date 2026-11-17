@@ -38,6 +38,16 @@ $routes->group('borrower/reservations', ['filter' => ['nostore', 'authenticated:
     $routes->post('', 'ReservationController::store');
     $routes->get('(:num)', 'ReservationController::show/$1');
     $routes->post('(:num)/cancel', 'ReservationController::cancel/$1');
+    $routes->post('(:num)/payments', 'PaymentController::initiate/$1');
+    $routes->post('(:num)/payments/(:num)/verify', 'PaymentController::verify/$1/$2');
+});
+$routes->group('borrower/payments', ['filter' => ['nostore', 'authenticated:borrower', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('return', 'PaymentController::returnFromGateway');
+});
+$routes->group('notifications', ['filter' => ['nostore', 'authenticated', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('', 'NotificationController::index');
+    $routes->post('read-all', 'NotificationController::markAllRead');
+    $routes->post('(:num)/read', 'NotificationController::markRead/$1');
 });
 $routes->group('admin/reservations', ['filter' => ['nostore', 'authenticated:admin', 'csrf']], static function (RouteCollection $routes) {
     $routes->get('', 'ReservationController::adminIndex');

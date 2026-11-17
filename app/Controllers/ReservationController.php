@@ -6,6 +6,7 @@ use App\Models\ReservationModel;
 use App\Models\ReservationItemModel;
 use App\Models\ResourceModel;
 use App\Services\BookingRules;
+use App\Services\PaymentService;
 use App\Services\ReservationService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use DateTimeImmutable;
@@ -158,6 +159,7 @@ class ReservationController extends BaseController
         return view('reservations/show', [
             'title' => 'Reservation #' . $id, 'admin' => $admin, 'reservation' => $record,
             'items' => $items, 'borrower' => $borrower, 'reviewer' => $reviewer,
+            'payments' => (new PaymentService($db))->forReservation($id),
         ]);
     }
 

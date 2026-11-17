@@ -9,11 +9,13 @@ class ReservationService
 {
     private BookingTransactions $transactions;
     private BaseConnection $db;
+    private NotificationService $notifications;
 
-    public function __construct(?BaseConnection $db = null)
+    public function __construct(?BaseConnection $db = null, ?NotificationService $notifications = null)
     {
         $this->transactions = new BookingTransactions($db);
         $this->db = $this->transactions->db;
+        $this->notifications = $notifications ?? new NotificationService(new DatabaseNotificationStore($this->db));
     }
 
     private function input(array $input): array
@@ -98,7 +100,7 @@ class ReservationService
         if (!is_string($key) || !preg_match('/\A[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\z/', $key)) {
             throw new DomainException('Invalid submission key. Open a new reservation form.');
         }
-        return $this->transactions->run(function () use ($borrowerId, $input, $key, $data) {
+        $result = $this->transactions->run(function () use ($borrowerId, $input, $key, $data) {
             $resources = $this->transactions->lockResources(array_keys($data['quantities']));
             $this->user($borrowerId, 'borrower');
             $existing = $this->db->table('reservations')->where('submission_key', $key)->get()->getRowArray();
@@ -118,7 +120,7 @@ class ReservationService
                     || ($input['end_time'] ?? '') !== substr($end, 11, 5)) {
                     throw new DomainException('This submission key has already been used for a different request.');
                 }
-                return (int) $existing['id'];
+                return ['id' => (int) $existing['id'], 'created' => false, 'context' => []];
             }
             $quote = $this->quote($data, (new BookingRules())->schedule($input), $resources);
             $now = gmdate('Y-m-d H:i:s');
@@ -132,8 +134,22 @@ class ReservationService
                 unset($item['name']);
                 $this->db->table('reservation_items')->insert($item + ['reservation_id' => $id, 'created_at' => $now, 'updated_at' => $now]);
             }
-            return $id;
+            return [
+                'id' => $id,
+                'created' => true,
+                'context' => [
+                    'schedule' => BookingRules::display($quote['start_datetime']) . ' to ' . BookingRules::display($quote['end_datetime']),
+                    'amount' => $quote['total_amount'],
+                    'currency' => $quote['currency'],
+                ],
+            ];
         });
+
+        if ($result['created']) {
+            $this->notifications->reservationSubmitted($result['id'], $result['context']);
+        }
+
+        return $result['id'];
     }
 
     public function decide(int $actorId, int $reservationId, string $action, string $remarks = ''): void
@@ -150,7 +166,7 @@ class ReservationService
         if (!$items) {
             throw new DomainException('Reservation not found.');
         }
-        $this->transactions->run(function () use ($actorId, $reservationId, $action, $remarks, $items) {
+        $event = $this->transactions->run(function () use ($actorId, $reservationId, $action, $remarks, $items) {
             $resources = $this->transactions->lockResources(array_column($items, 'resource_id'));
             $reservation = $this->db->query('SELECT * FROM ' . $this->db->prefixTable('reservations') . ' WHERE id = ? FOR UPDATE', [$reservationId])->getRowArray();
             if (!$reservation) {
@@ -164,6 +180,11 @@ class ReservationService
             $expected = in_array($action, ['approve', 'reject', 'borrower_cancel'], true) ? 'pending' : 'approved';
             if ($reservation['status'] !== $expected) {
                 throw new DomainException('This decision is not allowed for the current reservation status.');
+            }
+            if (in_array($action, ['cancel', 'borrower_cancel'], true)) {
+                $payments = $this->db->table('payments')->where('reservation_id', $reservationId)
+                    ->whereIn('payment_status', ['pending', 'paid'])->get()->getResultArray();
+                PaymentRules::assertCanCancel($payments, $borrowerAction);
             }
             $now = gmdate('Y-m-d H:i:s');
             if (in_array($action, ['approve', 'cancel'], true) && $reservation['start_datetime'] <= $now) {
@@ -188,6 +209,23 @@ class ReservationService
                 $update += ['admin_id' => $actorId, 'admin_remarks' => $remarks === '' ? null : $remarks, 'reviewed_at' => $now];
             }
             $this->db->table('reservations')->where('id', $reservationId)->update($update);
+
+            return [
+                'user_id' => (int) $reservation['user_id'],
+                'status' => $status,
+                'context' => [
+                    'schedule' => BookingRules::display($reservation['start_datetime']) . ' to ' . BookingRules::display($reservation['end_datetime']),
+                    'amount' => $reservation['total_amount'],
+                    'currency' => $reservation['currency'],
+                ],
+            ];
         });
+
+        $this->notifications->reservationStatusChanged(
+            $event['user_id'],
+            $reservationId,
+            $event['status'],
+            $event['context']
+        );
     }
 }

@@ -24,7 +24,8 @@ final class ReservationManagementTest extends TestCase
         }
         // Keep the prefix short enough for MySQL foreign-key constraint names.
         self::$prefix = 'p4_' . bin2hex(random_bytes(6)) . '_';
-        $config = config('Database')->default;
+        $config = config('Database')->tests;
+        Tests\Support\IsolatedMySqlDatabase::verify($config, config('Database')->default, 'techreserve_test_db');
         $config['DBPrefix'] = self::$prefix;
         self::$db = Database::connect($config, false);
         $forge = Database::forge(self::$db);
@@ -410,7 +411,7 @@ final class ReservationManagementTest extends TestCase
     private function concurrent(array $jobs, int $resource): array
     {
         $env = array_merge(getenv(), $_ENV);
-        $config = config('Database')->default;
+        $config = config('Database')->tests;
         $config['DBPrefix'] = self::$prefix;
         foreach (['hostname', 'username', 'password', 'database', 'DBDriver', 'DBPrefix', 'port'] as $key) {
             $env['database.default.' . $key] = (string) $config[$key];

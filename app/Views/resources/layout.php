@@ -12,6 +12,7 @@
     <a href="<?= site_url(isset($admin) && !$admin ? 'borrower/dashboard' : 'admin/dashboard') ?>">Dashboard</a>
     <a href="<?= site_url(isset($admin) && !$admin ? 'borrower/resources' : 'admin/resources') ?>">Resources</a>
     <a href="<?= site_url(isset($admin) && !$admin ? 'borrower/reservations' : 'admin/reservations') ?>">Reservations</a>
+    <?= view('notifications/_navigation') ?>
     <form method="post" action="<?= site_url('logout') ?>"><?= csrf_field() ?><button type="submit" class="secondary">Log out</button></form>
 </nav></header>
 <main>

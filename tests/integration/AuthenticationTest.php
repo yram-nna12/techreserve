@@ -28,7 +28,8 @@ final class AuthenticationTest extends TestCase
             return;
         }
         self::$prefix = 'phase2_test_' . bin2hex(random_bytes(6)) . '_';
-        $config = config('Database')->default;
+        $config = config('Database')->tests;
+        Tests\Support\IsolatedMySqlDatabase::verify($config, config('Database')->default, 'techreserve_test_db');
         $config['DBPrefix'] = self::$prefix;
         self::$db = Database::connect($config, false);
         $forge = Database::forge(self::$db);

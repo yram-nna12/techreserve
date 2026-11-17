@@ -3,6 +3,7 @@
 namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
+use InvalidArgumentException;
 
 class Email extends BaseConfig
 {
@@ -123,4 +124,38 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->protocol = (string) env('email.protocol', 'smtp');
+        $this->fromEmail = (string) env('email.fromEmail', '');
+        $this->fromName = (string) env('email.fromName', 'TechReserve');
+        $this->SMTPHost = (string) env('email.SMTPHost', '');
+        $this->SMTPUser = (string) env('email.SMTPUser', '');
+        $this->SMTPPass = (string) env('email.SMTPPass', '');
+        $this->SMTPAuthMethod = (string) env('email.SMTPAuthMethod', 'login');
+        $this->SMTPCrypto = (string) env('email.SMTPCrypto', 'tls');
+        $this->SMTPPort = $this->integerSetting('email.SMTPPort', 587, 1, 65535);
+        $this->SMTPTimeout = $this->integerSetting('email.SMTPTimeout', 10, 1, 120);
+        $this->mailType = 'html';
+        $this->validate = true;
+
+        if (!in_array($this->SMTPCrypto, ['', 'tls', 'ssl'], true)) {
+            throw new InvalidArgumentException('email.SMTPCrypto must be empty, tls, or ssl.');
+        }
+        if (!in_array(strtolower($this->SMTPAuthMethod), ['login', 'plain'], true)) {
+            throw new InvalidArgumentException('email.SMTPAuthMethod must be login or plain.');
+        }
+    }
+
+    private function integerSetting(string $name, int $default, int $minimum, int $maximum): int
+    {
+        $value = filter_var(env($name, $default), FILTER_VALIDATE_INT);
+        if ($value === false || $value < $minimum || $value > $maximum) {
+            throw new InvalidArgumentException($name . ' is outside its supported range.');
+        }
+
+        return $value;
+    }
 }
