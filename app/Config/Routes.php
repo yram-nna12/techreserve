@@ -49,7 +49,13 @@ $routes->group('borrower/reservations', ['filter' => ['nostore', 'authenticated:
     $routes->post('(:num)/payments/(:num)/verify', 'PaymentController::verify/$1/$2');
 });
 $routes->group('borrower/payments', ['filter' => ['nostore', 'authenticated:borrower', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('', 'PaymentHistoryController::borrowerIndex');
     $routes->get('return', 'PaymentController::returnFromGateway');
+    $routes->get('(:num)/receipt', 'PaymentHistoryController::borrowerReceipt/$1');
+});
+$routes->group('admin/payments', ['filter' => ['nostore', 'authenticated:admin', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('', 'PaymentHistoryController::adminIndex');
+    $routes->get('(:num)/receipt', 'PaymentHistoryController::adminReceipt/$1');
 });
 $routes->group('notifications', ['filter' => ['nostore', 'authenticated', 'csrf']], static function (RouteCollection $routes) {
     $routes->get('', 'NotificationController::index');

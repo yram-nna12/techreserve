@@ -54,8 +54,8 @@ final class PaymentWebhookEvent
             || preg_match('/\A(?:0|[1-9][0-9]{0,7})\.[0-9]{2}\z/', $event['amount']) !== 1
             || $event['amount'] === '0.00'
             || $event['currency'] !== 'PHP'
-            || !in_array($event['payment_method'], ['gcash', 'bank_transfer'], true)
-            || !in_array($event['status'], ['paid', 'failed', 'expired'], true)
+            || !in_array($event['payment_method'], ['card', 'gcash', 'bank_transfer'], true)
+            || !in_array($event['status'], ['paid', 'failed', 'cancelled', 'expired'], true)
             || !self::isDate($event['expires_at'])
             || !array_key_exists('paid_at', $event)
             || ($event['status'] === 'paid' && !self::isDate($event['paid_at']))

@@ -31,8 +31,8 @@ final class PaymentService
 
     public function initiate(int $borrowerId, int $reservationId, string $method): array
     {
-        if (!in_array($method, ['gcash', 'bank_transfer'], true)) {
-            throw new DomainException('Choose Mock GCash or Mock Bank Transfer.');
+        if (!in_array($method, ['card', 'gcash', 'bank_transfer'], true)) {
+            throw new DomainException('Choose Mock Card, GCash, or Bank Transfer.');
         }
 
         $attempt = $this->transactions->run(function () use ($borrowerId, $reservationId, $method): array {

@@ -40,13 +40,13 @@ final class PaymentRules
 
     public static function nextStatus(string $current, string $gateway): string
     {
-        if (!in_array($gateway, ['pending', 'paid', 'failed', 'expired'], true)) {
+        if (!in_array($gateway, ['pending', 'paid', 'failed', 'cancelled', 'expired'], true)) {
             throw new UnexpectedValueException('Unsupported payment status from gateway.');
         }
         if ($current === 'pending') {
             return $gateway;
         }
-        if ($current === $gateway && in_array($current, ['paid', 'failed', 'expired'], true)) {
+        if ($current === $gateway && in_array($current, ['paid', 'failed', 'cancelled', 'expired'], true)) {
             return $current;
         }
 

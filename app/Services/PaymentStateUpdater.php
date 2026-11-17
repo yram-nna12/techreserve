@@ -116,7 +116,7 @@ final class PaymentStateUpdater implements PaymentStateApplierInterface
                 ]);
             }
 
-            if ($changed && in_array($nextStatus, ['paid', 'failed', 'expired'], true)) {
+            if ($changed && in_array($nextStatus, ['paid', 'failed', 'cancelled', 'expired'], true)) {
                 $this->notifications->persistPaymentStatusChanged(
                     (int) $reservation['user_id'],
                     $reservationId,

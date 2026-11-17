@@ -75,6 +75,7 @@ final class NotificationEventFactory
         $messages = [
             'paid' => ['payment_paid', 'Payment confirmed', 'was confirmed as paid'],
             'failed' => ['payment_failed', 'Payment failed', 'was confirmed as failed'],
+            'cancelled' => ['payment_cancelled', 'Payment cancelled', 'was cancelled'],
             'expired' => ['payment_expired', 'Payment expired', 'expired'],
         ];
         if (!isset($messages[$status])) {

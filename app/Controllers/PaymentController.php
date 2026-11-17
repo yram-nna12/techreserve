@@ -81,6 +81,7 @@ class PaymentController extends BaseController
         return match ($status) {
             'paid' => 'The gateway confirmed payment.',
             'failed' => 'The gateway confirmed that payment failed. You may start a new attempt.',
+            'cancelled' => 'The gateway confirmed that payment was cancelled. You may start a new attempt.',
             'expired' => 'The gateway confirmed that the payment attempt expired. You may start a new attempt.',
             default => 'The gateway confirms that payment is still pending.',
         };

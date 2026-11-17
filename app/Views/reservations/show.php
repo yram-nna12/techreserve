@@ -105,6 +105,7 @@ $duration = intdiv((new DateTimeImmutable($reservation['end_datetime'], new Date
             <label for="payment_method">Mock payment method</label>
             <select id="payment_method" name="payment_method" required>
                 <option value="gcash">Mock GCash</option>
+                <option value="card">Mock Credit / Debit Card</option>
                 <option value="bank_transfer">Mock Bank Transfer</option>
             </select>
             <p><button type="submit">Pay Now</button></p>
