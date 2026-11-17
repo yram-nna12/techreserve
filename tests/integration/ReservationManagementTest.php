@@ -2,8 +2,11 @@
 
 use App\Models\UserModel;
 use App\Services\AdministratorProvisioningService;
+use CodeIgniter\HTTP\Files\UploadedFile;
 use Config\Database;
 use PHPUnit\Framework\TestCase;
+
+require_once TESTPATH . '_support/TestReservationDocumentStorage.php';
 
 /** Real HTTP, session, CSRF and MySQL tests; only randomly prefixed tables are changed. */
 final class ReservationManagementTest extends TestCase
@@ -22,6 +25,7 @@ final class ReservationManagementTest extends TestCase
         if (getenv('TECHRESERVE_RESERVATION_INTEGRATION') !== '1') {
             return;
         }
+
         // Keep the prefix short enough for MySQL foreign-key constraint names.
         self::$prefix = 'p4_' . bin2hex(random_bytes(6)) . '_';
         $config = config('Database')->tests;
@@ -35,9 +39,11 @@ final class ReservationManagementTest extends TestCase
                 ['2026-11-17-000001_AddAcademicFieldsToUsers', 'AddAcademicFieldsToUsers', null],
                 ['2026-11-16-165159_CreateResourcesTable', 'CreateResourcesTable', 'resources'],
                 ['2026-11-17-000002_AddResourceDetails', 'AddResourceDetails', null],
+                ['2026-11-17-235100_AddResourceCatalogAndConflicts', 'AddResourceCatalogAndConflicts', null],
                 ['2026-11-16-165426_CreateReservationsTable', 'CreateReservationsTable', 'reservations'],
                 ['2026-11-16-165525_CreateReservationItemsTable', 'CreateReservationItemsTable', 'reservation_items'],
                 ['2026-11-17-000003_AddReservationBookingFields', 'AddReservationBookingFields', null],
+                ['2026-11-17-235200_CreateReservationDocuments', 'CreateReservationDocuments', 'reservation_documents'],
             ] as [$file, $class, $table]) {
                 require_once APPPATH . 'Database/Migrations/' . $file . '.php';
                 $class = 'App\\Database\\Migrations\\' . $class;
@@ -95,6 +101,7 @@ final class ReservationManagementTest extends TestCase
         if (getenv('TECHRESERVE_RESERVATION_INTEGRATION') !== '1') {
             $this->markTestSkipped('Set TECHRESERVE_RESERVATION_INTEGRATION=1 for isolated resource tests.');
         }
+        $this->cleanupStoredForms();
         foreach (array_reverse(self::$created) as $table) {
             self::$db->table($table)->where('id >', 0)->delete();
         }
@@ -119,6 +126,24 @@ final class ReservationManagementTest extends TestCase
         if ($this->browser) {
             curl_close($this->browser);
         }
+        $this->cleanupStoredForms();
+    }
+
+    private function cleanupStoredForms(): void
+    {
+        if (!isset(self::$db) || !in_array('reservation_documents', self::$created, true)) {
+            return;
+        }
+        $directory = config('ReservationDocuments')->storageDirectory;
+        foreach (self::$db->table('reservation_documents')->select('stored_name')->get()->getResultArray() as $document) {
+            $storedName = $document['stored_name'];
+            if (preg_match('/\A[a-f0-9]{64}\.(?:pdf|jpg|png)\z/', $storedName)) {
+                $path = $directory . DIRECTORY_SEPARATOR . $storedName;
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+        }
     }
 
     private function request(string $path, ?array $data = null): array
@@ -134,7 +159,8 @@ final class ReservationManagementTest extends TestCase
             },
         ]);
         if ($data !== null) {
-            curl_setopt($this->browser, CURLOPT_POSTFIELDS, http_build_query($data));
+            $hasFile = array_filter($data, static fn($value): bool => $value instanceof CURLFile) !== [];
+            curl_setopt($this->browser, CURLOPT_POSTFIELDS, $hasFile ? $data : http_build_query($data));
         }
         $body = curl_exec($this->browser);
         $this->assertNotFalse($body, 'HTTP transport failed.');
@@ -151,6 +177,15 @@ final class ReservationManagementTest extends TestCase
 
     private function postForm(string $form, string $target, array $data): array
     {
+        return $this->request($target, $data + ['csrf_test_name' => $this->token($form)]);
+    }
+
+    private function postUploadForm(string $form, string $target, array $data): array
+    {
+        $path = self::$directory . '/teacher-signed-form.pdf';
+        file_put_contents($path, "%PDF-1.4\n% synthetic signed form\n");
+        $data['request_form'] = new CURLFile($path, 'application/pdf', 'teacher-signed-form.pdf');
+
         return $this->request($target, $data + ['csrf_test_name' => $this->token($form)]);
     }
 
@@ -197,7 +232,16 @@ final class ReservationManagementTest extends TestCase
 
     private function service(): \App\Services\ReservationService
     {
-        return new \App\Services\ReservationService(self::$db);
+        return new TestReservationService(self::$db);
+    }
+
+    private function acceptForm(int $reservationId): void
+    {
+        $document = self::$db->table('reservation_documents')->where('reservation_id', $reservationId)
+            ->orderBy('id', 'DESC')->get(1)->getRowArray();
+        $this->assertNotEmpty($document);
+        (new \App\Services\ReservationDocumentService(self::$db))
+            ->review($this->admin(), $reservationId, (int) $document['id'], 'accept');
     }
 
     private function reject(callable $operation): void
@@ -267,6 +311,7 @@ final class ReservationManagementTest extends TestCase
         $this->assertSame($id, $this->service()->submit($this->borrower(), $input));
         $this->reject(fn() => $this->service()->submit($this->borrower(), array_replace($input, ['purpose' => 'Changed'])));
         self::$db->table('resources')->whereIn('id', [$facility, $equipment])->update(['rate_per_hour' => '500.00']);
+        $this->acceptForm($id);
         $this->service()->decide($this->admin(), $id, 'approve');
         $this->assertSame('60.00', self::$db->table('reservations')->where('id', $id)->get()->getRowArray()['total_amount']);
         $this->assertSame('60.00', self::$db->table('reservation_items')->where('reservation_id', $id)->get()->getRowArray()['rate_per_hour']);
@@ -304,10 +349,13 @@ final class ReservationManagementTest extends TestCase
         $resource = $this->resource();
         $one = $this->service()->submit($this->borrower(), $this->booking([$resource]));
         $two = $this->service()->submit($this->borrower(), $this->booking([$resource]));
+        $this->acceptForm($one);
+        $this->acceptForm($two);
         $this->service()->decide($this->admin(), $one, 'approve');
         $this->reject(fn() => $this->service()->decide($this->admin(), $two, 'approve'));
         $this->reject(fn() => $this->service()->submit($this->borrower(), $this->booking([$resource], '09:30', '10:30')));
         $back = $this->service()->submit($this->borrower(), $this->booking([$resource], '10:00', '11:00'));
+        $this->acceptForm($back);
         $this->service()->decide($this->admin(), $back, 'approve');
         $this->service()->decide($this->admin(), $one, 'cancel', 'Synthetic cancellation');
         $this->service()->decide($this->admin(), $two, 'approve');
@@ -318,14 +366,54 @@ final class ReservationManagementTest extends TestCase
         $this->reject(fn() => $this->service()->decide($this->admin(), $two, 'approve'));
     }
 
+    public function testGroupedEquipmentAllocatesAcrossInventoryAndReplaysSameSubmission(): void
+    {
+        $first = $this->resource([
+            'resource_type' => 'equipment', 'quantity' => '2', 'capacity' => null,
+            'category' => 'Audio', 'catalog_group' => 'Portable Speaker', 'inventory_identifier' => 'SPEAKER-01',
+            'rate_per_hour' => '100.00',
+        ]);
+        $second = $this->resource([
+            'resource_type' => 'equipment', 'quantity' => '2', 'capacity' => null,
+            'category' => 'Audio', 'catalog_group' => 'Portable Speaker', 'inventory_identifier' => 'SPEAKER-02',
+            'rate_per_hour' => '100.00',
+        ]);
+        $input = $this->booking([$first], quantities: [$first => 3]);
+
+        $id = $this->service()->submit($this->borrower(), $input);
+        $items = self::$db->table('reservation_items')->where('reservation_id', $id)->orderBy('resource_id')->get()->getResultArray();
+        $this->assertSame([$first, $second], array_map(static fn(array $item): int => (int) $item['resource_id'], $items));
+        $this->assertSame([2, 1], array_map(static fn(array $item): int => (int) $item['quantity'], $items));
+        $this->assertSame($id, $this->service()->submit($this->borrower(), $input));
+        $this->assertSame(1, self::$db->table('reservations')->countAllResults());
+    }
+
+    public function testSharedFacilityCommitmentsPreventConflictGroupChanges(): void
+    {
+        $loungeOne = $this->resource(['name' => 'Executive Lounge 1', 'conflict_group' => 'executive-lounge-1']);
+        $loungeTwo = $this->resource(['name' => 'Executive Lounge 2', 'conflict_group' => 'executive-lounge-1']);
+        $reservation = $this->service()->submit($this->borrower(), $this->booking([$loungeOne]));
+        $this->acceptForm($reservation);
+        $this->service()->decide($this->admin(), $reservation, 'approve');
+
+        [$data, $errors] = (new \App\Services\ResourceService())->validate($this->data([
+            'name' => 'Executive Lounge 2',
+            'conflict_groups' => 'executive-lounge-2',
+        ]));
+        $this->assertSame([], $errors);
+        $this->reject(fn() => (new \App\Services\ResourceBookingGuard(self::$db))->change($loungeTwo, $data));
+    }
+
     public function testEquipmentPeakUsesTimeSegmentsInsteadOfSumOfOverlaps(): void
     {
         $id = $this->resource(['resource_type' => 'equipment', 'quantity' => '4', 'capacity' => null]);
         foreach ([['09:00', '10:00'], ['10:00', '11:00']] as [$start, $end]) {
             $reservation = $this->service()->submit($this->borrower(), $this->booking([$id], $start, $end, [$id => 2]));
+            $this->acceptForm($reservation);
             $this->service()->decide($this->admin(), $reservation, 'approve');
         }
         $wide = $this->service()->submit($this->borrower(), $this->booking([$id], '09:00', '11:00', [$id => 2]));
+        $this->acceptForm($wide);
         $this->service()->decide($this->admin(), $wide, 'approve');
         $this->reject(fn() => $this->service()->submit($this->borrower(), $this->booking([$id], '09:30', '10:30')));
         $this->assertSame(3, self::$db->table('reservations')->where('status', 'approved')->countAllResults());
@@ -347,6 +435,7 @@ final class ReservationManagementTest extends TestCase
         self::$db->table('users')->where('id', $this->borrower())->update(['status' => 'inactive']);
         $this->reject(fn() => $this->service()->decide($this->admin(), $id, 'approve'));
         self::$db->table('users')->where('id', $this->borrower())->update(['status' => 'active']);
+        $this->acceptForm($id);
         $this->service()->decide($this->admin(), $id, 'approve');
         $this->reject(fn() => $this->service()->decide($this->borrower(), $id, 'borrower_cancel'));
         $this->reject(fn() => $this->service()->decide($this->admin(), $id, 'complete'));
@@ -366,6 +455,7 @@ final class ReservationManagementTest extends TestCase
         self::$db->table('resources')->where('id', $id)->update(['status' => 'available', 'deleted_at' => gmdate('Y-m-d H:i:s')]);
         $this->reject(fn() => $this->service()->decide($this->admin(), $pending, 'approve'));
         self::$db->table('resources')->where('id', $id)->update(['deleted_at' => null]);
+        $this->acceptForm($pending);
         $this->service()->decide($this->admin(), $pending, 'approve');
         $guard = new \App\Services\ResourceBookingGuard(self::$db);
         [$data, $errors] = (new \App\Services\ResourceService())->validate($this->data(['resource_type' => 'equipment', 'capacity' => '', 'quantity' => '5']));
@@ -451,6 +541,8 @@ final class ReservationManagementTest extends TestCase
             $resource = $this->resource(['resource_type' => $type, 'quantity' => (string) $stock, 'capacity' => null]);
             $one = $this->service()->submit($this->borrower(), $this->booking([$resource], quantities: [$resource => $quantity]));
             $two = $this->service()->submit($this->borrower(), $this->booking([$resource], quantities: [$resource => $quantity]));
+            $this->acceptForm($one);
+            $this->acceptForm($two);
             $results = $this->concurrent([['operation' => 'approve', 'actor' => $this->admin(), 'id' => $one], ['operation' => 'approve', 'actor' => $secondAdmin, 'id' => $two]], $resource);
             $counts = array_count_values(array_column($results, 'result'));
             $this->assertSame(1, $counts['success'] ?? 0);
@@ -487,7 +579,7 @@ final class ReservationManagementTest extends TestCase
         $this->assertSame(200, $preview['status']);
         $this->assertStringContainsString('Estimated total', $preview['body']);
         $this->assertSame(0, self::$db->table('reservations')->countAllResults());
-        $submit = $this->postForm('/borrower/reservations/new', '/borrower/reservations', $input);
+        $submit = $this->postUploadForm('/borrower/reservations/new', '/borrower/reservations', $input);
         $this->assertContains($submit['status'], [302, 303]);
         $id = (int) self::$db->table('reservations')->get()->getRowArray()['id'];
         $detail = $this->request('/borrower/reservations/' . $id);
@@ -517,6 +609,9 @@ final class ReservationManagementTest extends TestCase
         $decision = $this->postForm('/admin/reservations/' . $id, '/admin/reservations/' . $id . '/decision', ['action' => 'approve', 'total_amount' => '0.00']);
         $this->assertContains($decision['status'], [302, 303]);
         $this->assertSame('pending', self::$db->table('reservations')->where('id', $id)->get()->getRowArray()['status']);
+        $documentId = (int) self::$db->table('reservation_documents')->where('reservation_id', $id)->get()->getRowArray()['id'];
+        $review = $this->postForm('/admin/reservations/' . $id, '/admin/reservations/' . $id . '/documents/' . $documentId . '/review', ['decision' => 'accept']);
+        $this->assertContains($review['status'], [302, 303]);
         $decision = $this->postForm('/admin/reservations/' . $id, '/admin/reservations/' . $id . '/decision', ['action' => 'approve']);
         $this->assertContains($decision['status'], [302, 303]);
         $this->assertSame('approved', self::$db->table('reservations')->where('id', $id)->get()->getRowArray()['status']);

@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Libraries\PaymentGatewayException;
 use Throwable;
 
-final class PaymentGatewayClient
+final class PaymentGatewayClient implements PaymentStatusProviderInterface
 {
     public function initiate(array $payload): array
     {
@@ -15,7 +15,12 @@ final class PaymentGatewayClient
             return PaymentGatewayResponse::initiation($response, $payload, $config->baseUrl);
         } catch (Throwable $exception) {
             log_message('warning', 'Payment gateway initiation response could not be verified ({exceptionClass}).', ['exceptionClass' => $exception::class]);
-            throw new PaymentGatewayException('The payment gateway response could not be verified. The attempt remains unresolved.', 0, $exception);
+            throw new PaymentGatewayException(
+                'The payment gateway response could not be verified. The attempt remains unresolved.',
+                false,
+                'invalid_response',
+                $exception
+            );
         }
     }
 
@@ -29,7 +34,12 @@ final class PaymentGatewayClient
             return PaymentGatewayResponse::status($response, $expected);
         } catch (Throwable $exception) {
             log_message('warning', 'Payment gateway status response could not be verified ({exceptionClass}).', ['exceptionClass' => $exception::class]);
-            throw new PaymentGatewayException('The payment gateway status response could not be verified.', 0, $exception);
+            throw new PaymentGatewayException(
+                'The payment gateway status response could not be verified.',
+                false,
+                'invalid_response',
+                $exception
+            );
         }
     }
 
@@ -38,7 +48,7 @@ final class PaymentGatewayClient
         $config = config('PaymentGateway');
         if ($config->apiKey === '' || !in_array(parse_url($config->baseUrl, PHP_URL_SCHEME), ['http', 'https'], true)
             || parse_url($config->baseUrl, PHP_URL_HOST) === null) {
-            throw new PaymentGatewayException('The payment gateway is not configured.');
+            throw new PaymentGatewayException('The payment gateway is not configured.', false, 'not_configured');
         }
 
         $client = single_service('curlrequest', [
@@ -62,11 +72,22 @@ final class PaymentGatewayClient
             $result = $client->request($method, $config->baseUrl . $path, $options);
         } catch (Throwable $exception) {
             log_message('warning', 'Payment gateway request failed ({exceptionClass}).', ['exceptionClass' => $exception::class]);
-            throw new PaymentGatewayException('The payment gateway could not be reached. The payment remains pending.', 0, $exception);
+            throw new PaymentGatewayException(
+                'The payment gateway could not be reached. The payment remains pending.',
+                true,
+                'network_error',
+                $exception
+            );
         }
 
-        if ($result->getStatusCode() < 200 || $result->getStatusCode() >= 300) {
-            throw new PaymentGatewayException('The payment gateway could not confirm the request. The payment remains pending.');
+        $statusCode = $result->getStatusCode();
+        if ($statusCode < 200 || $statusCode >= 300) {
+            $retryable = in_array($statusCode, [408, 429], true) || $statusCode >= 500;
+            throw new PaymentGatewayException(
+                'The payment gateway could not confirm the request. The payment remains pending.',
+                $retryable,
+                'http_' . $statusCode
+            );
         }
 
         return $result->getBody();

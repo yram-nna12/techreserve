@@ -6,6 +6,7 @@ use App\Libraries\NotificationEmailRenderer;
 use App\Libraries\NotificationEventFactory;
 use Config\Notifications;
 use DomainException;
+use RuntimeException;
 use Throwable;
 
 final class NotificationService
@@ -51,6 +52,55 @@ final class NotificationService
             $status,
             $context
         ));
+    }
+
+    public function persistPaymentStatusChanged(
+        int $userId,
+        int $reservationId,
+        int $paymentId,
+        string $status,
+        array $context
+    ): void {
+        try {
+            if (!$this->settings->enabled) {
+                throw new RuntimeException('In-app payment notifications are disabled.');
+            }
+
+            $event = $this->events->paymentStatusChanged(
+                $userId,
+                $reservationId,
+                $paymentId,
+                $status,
+                $context
+            );
+            if ($event === null) {
+                return;
+            }
+
+            $recipient = $this->store->activeRecipient($userId);
+            if ($recipient === null
+                || ($recipient['status'] ?? null) !== 'active'
+                || ($recipient['role'] ?? null) !== $event['recipient_role']) {
+                throw new RuntimeException('The in-app payment notification recipient is unavailable.');
+            }
+
+            $now = gmdate('Y-m-d H:i:s');
+            $this->store->createEvent([
+                'user_id' => (int) $recipient['id'],
+                'reservation_id' => $event['reservation_id'],
+                'title' => $event['title'],
+                'message' => $event['message'],
+                'notification_type' => $event['notification_type'],
+                'event_key' => $event['event_key'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], null);
+        } catch (Throwable $exception) {
+            log_message('error', 'Atomic in-app payment notification failed; the payment transaction will roll back ({exceptionClass}).', [
+                'exceptionClass' => $exception::class,
+            ]);
+            throw $exception;
+        }
     }
 
     public function roleForUser(int $userId): ?string

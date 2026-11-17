@@ -50,6 +50,72 @@ final class NotificationServiceTest extends TestCase
         $this->assertSame('admin', $store->recipients[8]['role']);
     }
 
+    public function testReservationAndPaymentEventsAreStoredForTheirIntendedRecipients(): void
+    {
+        $store = new FakeNotificationStore([
+            4 => ['id' => 4, 'role' => 'borrower', 'status' => 'active', 'email' => 'borrower@example.test'],
+            8 => ['id' => 8, 'role' => 'admin', 'status' => 'active', 'email' => 'admin@example.test'],
+        ]);
+        $service = new NotificationService(
+            store: $store,
+            renderer: new NotificationEmailRenderer(),
+            settings: $this->enabledSettings()
+        );
+
+        $service->reservationSubmitted(25, []);
+        $service->reservationStatusChanged(4, 25, 'approved', []);
+        $service->reservationStatusChanged(4, 26, 'rejected', []);
+        $service->paymentStatusChanged(4, 25, 12, 'paid', []);
+        $service->paymentStatusChanged(4, 26, 13, 'failed', []);
+        $service->paymentStatusChanged(4, 27, 14, 'expired', []);
+
+        $this->assertSame(
+            [
+                ['user_id' => 8, 'notification_type' => 'reservation_submitted'],
+                ['user_id' => 4, 'notification_type' => 'reservation_approved'],
+                ['user_id' => 4, 'notification_type' => 'reservation_rejected'],
+                ['user_id' => 4, 'notification_type' => 'payment_paid'],
+                ['user_id' => 4, 'notification_type' => 'payment_failed'],
+                ['user_id' => 4, 'notification_type' => 'payment_expired'],
+            ],
+            array_map(
+                static fn(array $notification): array => [
+                    'user_id' => $notification['user_id'],
+                    'notification_type' => $notification['notification_type'],
+                ],
+                $store->notifications
+            )
+        );
+    }
+
+    public function testAtomicPaymentNotificationsAreInAppOnlyAndDeduplicated(): void
+    {
+        $store = new FakeNotificationStore([
+            4 => ['id' => 4, 'role' => 'borrower', 'status' => 'active', 'email' => 'borrower@example.test'],
+        ]);
+        $service = new NotificationService(store: $store, settings: $this->enabledSettings());
+
+        $service->persistPaymentStatusChanged(4, 25, 12, 'paid', ['amount' => '45.00', 'currency' => 'PHP']);
+        $service->persistPaymentStatusChanged(4, 25, 12, 'paid', ['amount' => '45.00', 'currency' => 'PHP']);
+
+        $this->assertCount(1, $store->notifications);
+        $this->assertSame('payment:12:paid', $store->notifications[0]['event_key']);
+        $this->assertSame('payment_paid', $store->notifications[0]['notification_type']);
+        $this->assertSame([], $store->emails);
+    }
+
+    public function testAtomicPaymentNotificationStorageFailurePropagates(): void
+    {
+        $store = new FakeNotificationStore([
+            4 => ['id' => 4, 'role' => 'borrower', 'status' => 'active', 'email' => 'borrower@example.test'],
+        ]);
+        $store->failCreateEvent = true;
+        $service = new NotificationService(store: $store, settings: $this->enabledSettings());
+
+        $this->expectException(RuntimeException::class);
+        $service->persistPaymentStatusChanged(4, 25, 12, 'paid', []);
+    }
+
     public function testWrongRoleIsSkippedAndInvalidAddressGetsInAppOnly(): void
     {
         $store = new FakeNotificationStore([
@@ -88,16 +154,19 @@ final class NotificationServiceTest extends TestCase
         $this->assertSame(0, $service->unreadCount(8));
     }
 
-    public function testNotificationWritesRemainDisabledByDefault(): void
+    public function testNotificationWritesAreEnabledByDefault(): void
     {
-        $store = new FakeNotificationStore([]);
+        $store = new FakeNotificationStore([
+            8 => ['id' => 8, 'role' => 'admin', 'status' => 'active', 'email' => 'admin@example.test'],
+        ]);
         $settings = new Notifications();
         $service = new NotificationService(store: $store, settings: $settings);
 
         $service->reservationSubmitted(25, []);
 
-        $this->assertCount(0, $store->notifications);
-        $this->assertCount(0, $store->emails);
+        $this->assertTrue($settings->enabled);
+        $this->assertCount(1, $store->notifications);
+        $this->assertSame('reservation:25:submitted', $store->notifications[0]['event_key']);
     }
 
     private function enabledSettings(): Notifications
@@ -113,6 +182,7 @@ final class FakeNotificationStore implements NotificationStoreInterface
     public array $recipients;
     public array $notifications = [];
     public array $emails = [];
+    public bool $failCreateEvent = false;
 
     public function __construct(array $recipients)
     {
@@ -134,6 +204,9 @@ final class FakeNotificationStore implements NotificationStoreInterface
 
     public function createEvent(array $notification, ?array $email): bool
     {
+        if ($this->failCreateEvent) {
+            throw new RuntimeException('Simulated notification persistence failure.');
+        }
         foreach ($this->notifications as $existing) {
             if ($existing['user_id'] === $notification['user_id'] && $existing['event_key'] === $notification['event_key']) {
                 return false;

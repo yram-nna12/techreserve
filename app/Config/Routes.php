@@ -4,6 +4,11 @@ use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
 $routes->get('/', 'Home::index');
+$routes->post(
+    'api/v1/webhooks/payments',
+    'PaymentWebhookController::receive',
+    ['filter' => 'nostore']
+);
 
 $routes->group('', ['filter' => 'nostore'], static function (RouteCollection $routes) {
     $routes->get('register', 'AuthController::registerForm', ['filter' => 'csrf']);
@@ -38,6 +43,8 @@ $routes->group('borrower/reservations', ['filter' => ['nostore', 'authenticated:
     $routes->post('', 'ReservationController::store');
     $routes->get('(:num)', 'ReservationController::show/$1');
     $routes->post('(:num)/cancel', 'ReservationController::cancel/$1');
+    $routes->post('(:num)/form', 'ReservationDocumentController::resubmit/$1');
+    $routes->get('(:num)/documents/(:num)', 'ReservationDocumentController::borrowerDownload/$1/$2');
     $routes->post('(:num)/payments', 'PaymentController::initiate/$1');
     $routes->post('(:num)/payments/(:num)/verify', 'PaymentController::verify/$1/$2');
 });
@@ -53,4 +60,6 @@ $routes->group('admin/reservations', ['filter' => ['nostore', 'authenticated:adm
     $routes->get('', 'ReservationController::adminIndex');
     $routes->get('(:num)', 'ReservationController::adminShow/$1');
     $routes->post('(:num)/decision', 'ReservationController::decide/$1');
+    $routes->get('(:num)/documents/(:num)', 'ReservationDocumentController::adminDownload/$1/$2');
+    $routes->post('(:num)/documents/(:num)/review', 'ReservationDocumentController::review/$1/$2');
 });

@@ -7,7 +7,7 @@ use InvalidArgumentException;
 
 class Notifications extends BaseConfig
 {
-    public bool $enabled = false;
+    public bool $enabled = true;
     public bool $emailDeliveryEnabled = false;
     public int $maxEmailAttempts = 5;
     public int $emailLeaseSeconds = 300;
@@ -17,7 +17,7 @@ class Notifications extends BaseConfig
     public function __construct()
     {
         parent::__construct();
-        $this->enabled = $this->booleanSetting('notifications.enabled', false);
+        $this->enabled = $this->booleanSetting('notifications.enabled', true);
         $this->emailDeliveryEnabled = $this->booleanSetting('notifications.emailDeliveryEnabled', false);
     }
 

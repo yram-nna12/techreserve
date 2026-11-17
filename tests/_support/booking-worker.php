@@ -9,6 +9,7 @@ foreach (['hostname', 'username', 'password', 'database', 'DBDriver', 'DBPrefix'
     }
 }
 require dirname(__DIR__, 2) . '/vendor/codeigniter4/framework/system/Test/bootstrap.php';
+require_once __DIR__ . '/TestReservationDocumentStorage.php';
 $config = config('Database')->default;
 if (!preg_match('/\Ap4_[a-f0-9]{12}_\z/', $config['DBPrefix'])) {
     exit(1);
@@ -21,7 +22,7 @@ if (trim(fgets(STDIN)) !== 'GO') {
     exit(1);
 }
 try {
-    $service = new \App\Services\ReservationService($db);
+    $service = new TestReservationService($db);
     if ($job['operation'] === 'submit') {
         $id = $service->submit($job['actor'], $job['input']);
     } else {

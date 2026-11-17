@@ -35,6 +35,7 @@ final class ResourceManagementTest extends TestCase
                 ['2026-11-17-000001_AddAcademicFieldsToUsers', 'AddAcademicFieldsToUsers', null],
                 ['2026-11-16-165159_CreateResourcesTable', 'CreateResourcesTable', 'resources'],
                 ['2026-11-17-000002_AddResourceDetails', 'AddResourceDetails', null],
+                ['2026-11-17-235100_AddResourceCatalogAndConflicts', 'AddResourceCatalogAndConflicts', null],
                 ['2026-11-16-165426_CreateReservationsTable', 'CreateReservationsTable', 'reservations'],
                 ['2026-11-16-165525_CreateReservationItemsTable', 'CreateReservationItemsTable', 'reservation_items'],
             ] as [$file, $class, $table]) {

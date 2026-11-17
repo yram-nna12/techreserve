@@ -27,11 +27,11 @@ final class PaymentGatewayResponse
         $data = self::data($body);
         self::assertCommon($data, $expected);
 
-        if (!array_key_exists('paid_at', $data) || ($data['paid_at'] !== null && !self::isDate($data['paid_at']))) {
+        if (!array_key_exists('paid_at', $data)
+            || ($data['paid_at'] !== null && !self::isDate($data['paid_at']))
+            || ($data['status'] === 'paid' && $data['paid_at'] === null)
+            || ($data['status'] !== 'paid' && $data['paid_at'] !== null)) {
             throw new UnexpectedValueException('The payment gateway returned an invalid paid timestamp.');
-        }
-        if ($data['status'] === 'paid' && $data['paid_at'] === null) {
-            throw new UnexpectedValueException('The payment gateway omitted the payment confirmation timestamp.');
         }
         self::assertDate($data['expires_at'] ?? null);
 

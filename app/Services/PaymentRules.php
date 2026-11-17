@@ -7,10 +7,18 @@ use UnexpectedValueException;
 
 final class PaymentRules
 {
-    public static function assertCanInitiate(string $reservationStatus, string $amount, string $currency): void
+    public static function assertCanInitiate(
+        string $reservationStatus,
+        string $amount,
+        string $currency,
+        ?string $formStatus
+    ): void
     {
         if ($reservationStatus !== 'approved') {
             throw new DomainException('Payment is available only for approved reservations.');
+        }
+        if ($formStatus !== 'accepted') {
+            throw new DomainException('Payment is available only after the latest signed request form is accepted.');
         }
         if ($currency !== 'PHP' || !preg_match('/\A(?:0|[1-9][0-9]{0,7})\.[0-9]{2}\z/', $amount)
             || $amount === '0.00') {

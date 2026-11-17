@@ -14,6 +14,7 @@ final class PaymentService
     private BookingTransactions $transactions;
     private PaymentGatewayClient $gateway;
     private NotificationService $notifications;
+    private PaymentStateUpdater $stateUpdater;
 
     public function __construct(
         ?BaseConnection $db = null,
@@ -25,6 +26,7 @@ final class PaymentService
         $this->transactions = new BookingTransactions($this->db);
         $this->gateway = $gateway ?? new PaymentGatewayClient();
         $this->notifications = $notifications ?? new NotificationService(new DatabaseNotificationStore($this->db));
+        $this->stateUpdater = new PaymentStateUpdater($this->db, $this->notifications);
     }
 
     public function initiate(int $borrowerId, int $reservationId, string $method): array
@@ -35,13 +37,20 @@ final class PaymentService
 
         $attempt = $this->transactions->run(function () use ($borrowerId, $reservationId, $method): array {
             $reservation = $this->db->query(
-                'SELECT * FROM ' . $this->db->prefixTable('reservations') . ' WHERE id = ? FOR UPDATE',
+                'SELECT reservations.*, (SELECT documents.status FROM ' . $this->db->prefixTable('reservation_documents')
+                    . ' documents WHERE documents.reservation_id = reservations.id ORDER BY documents.id DESC LIMIT 1) AS form_status'
+                    . ' FROM ' . $this->db->prefixTable('reservations') . ' reservations WHERE reservations.id = ? FOR UPDATE',
                 [$reservationId]
             )->getRowArray();
             if (!$reservation || (int) $reservation['user_id'] !== $borrowerId) {
                 throw new DomainException('Reservation not found.');
             }
-            PaymentRules::assertCanInitiate($reservation['status'], $reservation['total_amount'], $reservation['currency']);
+            PaymentRules::assertCanInitiate(
+                $reservation['status'],
+                $reservation['total_amount'],
+                $reservation['currency'],
+                $reservation['form_status']
+            );
 
             $borrower = $this->db->query(
                 'SELECT student_id, full_name, role, status FROM ' . $this->db->prefixTable('users') . ' WHERE id = ?',
@@ -76,12 +85,21 @@ final class PaymentService
                 return ['id' => (int) $attempt['id'], 'payload' => $payload, 'record' => $attempt];
             }
 
-            PaymentRules::assertCanInitiate('approved', $reservation['total_amount'], $reservation['currency']);
+            PaymentRules::assertCanInitiate(
+                'approved',
+                $reservation['total_amount'],
+                $reservation['currency'],
+                $reservation['form_status']
+            );
             $items = $this->db->query(
-                'SELECT resources.name, resources.resource_type AS type, reservation_items.quantity'
+                'SELECT CASE WHEN resources.catalog_group IS NULL THEN resources.name ELSE resources.catalog_group END AS name,'
+                    . ' resources.resource_type AS type, SUM(reservation_items.quantity) AS quantity'
                     . ' FROM ' . $this->db->prefixTable('reservation_items') . ' reservation_items'
                     . ' JOIN ' . $this->db->prefixTable('resources') . ' resources ON resources.id = reservation_items.resource_id'
-                    . ' WHERE reservation_items.reservation_id = ? ORDER BY reservation_items.id',
+                    . ' WHERE reservation_items.reservation_id = ?'
+                    . ' GROUP BY resources.resource_type, resources.category, resources.rate_per_hour, resources.catalog_group,'
+                    . ' CASE WHEN resources.catalog_group IS NULL THEN resources.id ELSE 0 END'
+                    . ' ORDER BY MIN(reservation_items.id)',
                 [$reservationId]
             )->getResultArray();
             if (count($items) < 1 || count($items) > 20) {
@@ -167,6 +185,32 @@ final class PaymentService
         return $this->verifyPayment($borrowerId, (int) $row['reservation_id'], (int) $row['id']);
     }
 
+    public function applyWebhook(array $event, string $payloadHash): array
+    {
+        $payment = $this->db->table('payments')
+            ->select('id, reservation_id')
+            ->where('transaction_reference', $event['transaction_reference'])
+            ->get()->getRowArray();
+        if (!$payment) {
+            throw new \App\Libraries\PaymentWebhookException(
+                404,
+                'payment_not_found',
+                'The payment event could not be matched.'
+            );
+        }
+
+        return $this->stateUpdater->apply(
+            (int) $payment['reservation_id'],
+            (int) $payment['id'],
+            $event,
+            [
+                'event_id' => $event['event_id'],
+                'payload_hash' => $payloadHash,
+                'event_type' => $event['event_type'],
+            ]
+        );
+    }
+
     public function forReservation(int $reservationId): array
     {
         return $this->db->table('payments')->where('reservation_id', $reservationId)->orderBy('id', 'DESC')->get()->getResultArray();
@@ -182,66 +226,7 @@ final class PaymentService
             'payment_method' => $payment['payment_method'],
         ];
         $gatewayData = $this->gateway->status($expected);
-        $gatewayId = $payment['gateway_transaction_id'];
-        if ($gatewayId !== null && $gatewayId !== $gatewayData['gateway_transaction_id']) {
-            throw new RuntimeException('Gateway transaction identifier mismatch; payment status was not changed.');
-        }
-
-        $result = $this->transactions->run(function () use ($borrowerId, $reservationId, $paymentId, $gatewayData): array {
-            $reservation = $this->db->query(
-                'SELECT id, user_id FROM ' . $this->db->prefixTable('reservations') . ' WHERE id = ? FOR UPDATE',
-                [$reservationId]
-            )->getRowArray();
-            $current = $this->db->query(
-                'SELECT * FROM ' . $this->db->prefixTable('payments') . ' WHERE id = ? AND reservation_id = ? FOR UPDATE',
-                [$paymentId, $reservationId]
-            )->getRowArray();
-            if (!$reservation || (int) $reservation['user_id'] !== $borrowerId || !$current) {
-                throw new DomainException('Payment reference was not found.');
-            }
-
-            $next = PaymentRules::nextStatus($current['payment_status'], $gatewayData['status']);
-            $now = gmdate('Y-m-d H:i:s');
-            $update = [
-                'gateway_transaction_id' => $gatewayData['gateway_transaction_id'],
-                'expires_at' => $gatewayData['expires_at'],
-                'last_verified_at' => $now,
-                'updated_at' => $now,
-            ];
-            if ($next !== 'pending') {
-                $update['payment_status'] = $next;
-                $update['active_reservation_id'] = null;
-                $update['paid_at'] = $next === 'paid' ? $gatewayData['paid_at'] : null;
-            }
-            $this->db->table('payments')->where('id', $paymentId)->update($update);
-
-            return [
-                'payment' => array_merge($current, $update),
-                'notification' => $next !== $current['payment_status'] && in_array($next, ['paid', 'failed', 'expired'], true)
-                    ? [
-                        'user_id' => (int) $reservation['user_id'],
-                        'status' => $next,
-                        'amount' => $current['amount'],
-                        'currency' => $current['currency'],
-                    ]
-                    : null,
-            ];
-        });
-
-        if ($result['notification'] !== null) {
-            $this->notifications->paymentStatusChanged(
-                $result['notification']['user_id'],
-                $reservationId,
-                $paymentId,
-                $result['notification']['status'],
-                [
-                    'amount' => $result['notification']['amount'],
-                    'currency' => $result['notification']['currency'],
-                ]
-            );
-        }
-
-        return $result['payment'];
+        return $this->stateUpdater->apply($reservationId, $paymentId, $gatewayData)['payment'];
     }
 
     private function saveGatewayInitiation(int $paymentId, array $gatewayData): void

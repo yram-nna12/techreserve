@@ -40,6 +40,14 @@ database.tests.password =
 # the local ignored .env; never commit its value.
 paymentGateway.baseUrl = http://127.0.0.1:8082
 paymentGateway.apiKey =
+# Set the same private webhook signing secret in TechReserve and the gateway.
+paymentGateway.webhookSecret =
+paymentGateway.webhookTimestampToleranceSeconds = 300
+# Automatic payment reconciliation runs only for payments stale by this interval.
+paymentGateway.reconciliationStaleMinutes = 10
+paymentGateway.reconciliationBatchLimit = 25
+paymentGateway.reconciliationMaxAttempts = 2
+paymentGateway.reconciliationRetryDelayMilliseconds = 250
 
 # Phase 6 notifications are disabled by default until the additive migration is approved.
 notifications.enabled = false

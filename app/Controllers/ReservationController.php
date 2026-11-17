@@ -7,7 +7,10 @@ use App\Models\ReservationItemModel;
 use App\Models\ResourceModel;
 use App\Services\BookingRules;
 use App\Services\PaymentService;
+use App\Services\ResourceCatalog;
 use App\Services\ReservationService;
+use App\Services\ReservationDocumentService;
+use CodeIgniter\HTTP\Files\UploadedFile;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -39,7 +42,12 @@ class ReservationController extends BaseController
     {
         $input = $this->input();
         try {
-            $id = (new ReservationService())->submit((int) session()->get('user_id'), $input);
+            $upload = $this->request->getFile('request_form');
+            $id = (new ReservationService())->submit(
+                (int) session()->get('user_id'),
+                $input,
+                $upload instanceof UploadedFile ? $upload : null
+            );
             return redirect()->to(site_url('borrower/reservations/' . $id))->with('success', 'Reservation submitted for review. Availability is secured only after approval.');
         } catch (Throwable $exception) {
             return $this->response->setStatusCode($exception instanceof DomainException ? 422 : 503)
@@ -73,7 +81,9 @@ class ReservationController extends BaseController
         }
         return view('reservations/form', [
             'title' => 'Create reservation', 'admin' => false, 'input' => $input, 'quote' => $quote, 'error' => $error,
-            'resources' => (new ResourceModel())->where('status', 'available')->orderBy('name')->findAll(),
+            'resources' => ResourceCatalog::borrowerGroups(
+                (new ResourceModel())->where('status', 'available')->orderBy('name')->orderBy('id')->findAll()
+            ),
             'booking' => config('Booking'),
         ]);
     }
@@ -151,15 +161,21 @@ class ReservationController extends BaseController
     {
         $record = $this->record($id, $admin);
         $db = \Config\Database::connect();
-        $items = (new ReservationItemModel())->select('reservation_items.*, resources.name, resources.resource_type')
+        $items = (new ReservationItemModel())->select(
+            'reservation_items.*, resources.name, resources.resource_type, resources.category, resources.catalog_group, resources.inventory_identifier'
+        )
             ->join('resources', 'resources.id = reservation_items.resource_id')->where('reservation_id', $id)->findAll();
         $borrower = $admin ? $db->table('users')->select('student_id, full_name, email, program, program_code, specialization, department')
             ->where('id', $record['user_id'])->get()->getRowArray() : null;
         $reviewer = $record['admin_id'] ? $db->table('users')->select('full_name')->where('id', $record['admin_id'])->get()->getRowArray() : null;
+        $documentService = new ReservationDocumentService($db);
+        $documents = $admin ? $documentService->allForReservation($id) : [];
+        $latestDocument = $admin ? ($documents[0] ?? null) : $documentService->latestForReservation($id);
         return view('reservations/show', [
             'title' => 'Reservation #' . $id, 'admin' => $admin, 'reservation' => $record,
             'items' => $items, 'borrower' => $borrower, 'reviewer' => $reviewer,
             'payments' => (new PaymentService($db))->forReservation($id),
+            'documents' => $documents, 'latestDocument' => $latestDocument,
         ]);
     }
 

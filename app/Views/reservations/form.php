@@ -22,7 +22,7 @@ foreach (is_array($input['items'] ?? null) ? $input['items'] : [] as $item) {
     <p>Available when checked. Availability and current rates will be checked again on submission; approval is still required.</p>
 </section>
 <?php endif ?>
-<form method="post" action="<?= site_url('borrower/reservations/preview') ?>">
+<form method="post" enctype="multipart/form-data" action="<?= site_url('borrower/reservations/preview') ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="submission_key" value="<?= esc($value('submission_key'), 'attr') ?>">
     <div class="filters">
@@ -42,7 +42,11 @@ foreach (is_array($input['items'] ?? null) ? $input['items'] : [] as $item) {
     <?php endforeach ?>
     </tbody></table></div>
     <p><label for="purpose">Purpose</label><textarea id="purpose" name="purpose" required maxlength="2000" rows="3"><?= esc($value('purpose')) ?></textarea></p>
-    <p><button type="submit">Preview availability and fees</button> <button type="submit" formaction="<?= site_url('borrower/reservations') ?>">Submit for review</button></p>
+    <p><label for="request_form">Teacher-signed request form (PDF, JPG, or PNG)</label>
+        <input id="request_form" name="request_form" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required>
+        <small>Required to submit the reservation; maximum size <?= number_format(config('ReservationDocuments')->maxFileSizeBytes / 1048576, 1) ?> MiB. The file is stored privately.</small>
+    </p>
+    <p><button type="submit" formnovalidate>Preview availability and fees</button> <button type="submit" formaction="<?= site_url('borrower/reservations') ?>">Submit for review</button></p>
     <p><a href="<?= site_url('borrower/reservations') ?>">My reservations</a></p>
 </form>
 <?= $this->endSection() ?>

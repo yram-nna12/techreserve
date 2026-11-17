@@ -60,8 +60,19 @@ final class DatabaseNotificationStore implements NotificationStoreInterface, Ema
                 ]
             );
             if ($this->db->affectedRows() !== 1) {
-                $this->db->transRollback();
-                return false;
+                $existing = $this->db->table('notifications')
+                    ->select('id')
+                    ->where('user_id', $notification['user_id'])
+                    ->where('event_key', $notification['event_key'])
+                    ->get()->getRowArray();
+                if ($existing !== null) {
+                    if (!$this->db->transCommit()) {
+                        throw new RuntimeException('Notification deduplication transaction failed.');
+                    }
+                    return false;
+                }
+
+                throw new RuntimeException('Notification event was not persisted.');
             }
 
             if ($email !== null) {

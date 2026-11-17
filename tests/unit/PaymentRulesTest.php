@@ -7,18 +7,21 @@ final class PaymentRulesTest extends TestCase
 {
     public function testOnlyPositivePhpTotalsOnApprovedReservationsCanStart(): void
     {
-        PaymentRules::assertCanInitiate('approved', '120.00', 'PHP');
+        PaymentRules::assertCanInitiate('approved', '120.00', 'PHP', 'accepted');
 
         foreach ([
-            ['pending', '120.00', 'PHP'],
-            ['rejected', '120.00', 'PHP'],
-            ['cancelled', '120.00', 'PHP'],
-            ['completed', '120.00', 'PHP'],
-            ['approved', '0.00', 'PHP'],
-            ['approved', '120.00', 'USD'],
-        ] as [$status, $amount, $currency]) {
+            ['pending', '120.00', 'PHP', 'accepted'],
+            ['rejected', '120.00', 'PHP', 'accepted'],
+            ['cancelled', '120.00', 'PHP', 'accepted'],
+            ['completed', '120.00', 'PHP', 'accepted'],
+            ['approved', '0.00', 'PHP', 'accepted'],
+            ['approved', '120.00', 'USD', 'accepted'],
+            ['approved', '120.00', 'PHP', null],
+            ['approved', '120.00', 'PHP', 'pending'],
+            ['approved', '120.00', 'PHP', 'rejected'],
+        ] as [$status, $amount, $currency, $formStatus]) {
             try {
-                PaymentRules::assertCanInitiate($status, $amount, $currency);
+                PaymentRules::assertCanInitiate($status, $amount, $currency, $formStatus);
                 $this->fail('An ineligible reservation payment was accepted.');
             } catch (DomainException) {
                 $this->assertTrue(true);

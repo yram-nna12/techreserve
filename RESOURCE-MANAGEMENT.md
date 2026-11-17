@@ -59,9 +59,22 @@ toolbar collection. Output is escaped; listing queries use Query Builder.
   facility to equipment. Quantity/capacity are limited to unsigned INT range.
 - Hourly rates are nonnegative decimals up to `99999999.99`, with at most two
   decimal places. Rates are normalized as decimal strings without float math.
-  The module does not introduce a currency or billing-rounding policy.
+  Provisional student-friendly PHP/hour suggestions are available for the
+  agreed facility and equipment names. They can all be overridden by an
+  administrator and are not official fees.
 - Location is optional (max 150 characters); description is optional (max 5000
   characters). Names are required (max 150 characters).
+- Categories are administrator-editable. Equipment records can share a
+  borrower catalog group; matching records with the same category, hourly rate,
+  and status appear as one catalog choice. Reservations allocate requested
+  quantities against the underlying inventory records, retaining each record
+  reference and optional unique inventory identifier for administrators.
+- Facilities can be assigned up to two comma-separated scheduling-conflict
+  groups. The known basketball gym alternatives share one group. The two
+  Executive Lounges have separate groups, while the combined lounge belongs to
+  both, so individual lounges remain independently bookable but the combined
+  space conflicts with either one. Administrators can configure groups for
+  other shared configurations.
 - Operational status is available, unavailable, or maintenance. All three are
   visible in the borrower catalog. This is not time-slot availability.
 - Lists support name/description/location search, type and status filters,
@@ -73,10 +86,21 @@ Archived resources are excluded from both lists and from detail/edit/archive
 routes, including direct requests. Their records and reservation references
 remain intact. Restore/archive-history interfaces are outside this phase.
 
-The existing `reservation_items` table can later reference resource IDs and
-store rate snapshots. No reservation, fee calculation, payment, or notification
-features are implemented here. Future code must validate schedules, operational
-status and quantities independently of the catalog display.
+Reservation previews and submissions validate schedules, operational status,
+and quantities server-side. Equipment availability is calculated per physical
+record and grouped quantities are distributed across available records.
+Facilities in a shared conflict group are checked together. Resource changes
+that would affect approved reservations use the same resource locks as booking
+operations; committed equipment stock and active conflict mappings cannot be
+silently reduced or changed.
+
+## Step 19 schema
+
+The additive `2026-11-17-235100_AddResourceCatalogAndConflicts` migration adds
+category, catalog-group, optional inventory-identifier, and facility-conflict
+fields and indexes. It has been created but **not run**. Apply it only after
+separate database approval. No inventory records or rates were inserted or
+changed during implementation.
 
 ## Automated verification
 
@@ -107,5 +131,5 @@ confirmed masked password/confirmation prompts and successful creation in a
 temporary isolated users table, which was then removed. Visual/mobile browser
 flows still require manual acceptance testing.
 
-The Phase 2 suite is rerun unchanged. SQLite starter database examples remain
-unavailable in the current PHP build; these opt-in suites use MySQL instead.
+SQLite starter database examples remain unavailable in the current PHP build;
+these opt-in suites use MySQL instead.

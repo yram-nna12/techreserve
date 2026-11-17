@@ -25,6 +25,35 @@ class AvailabilityService
         return $this->db->query($sql . ' FOR UPDATE', $bindings)->getResultArray();
     }
 
+    private function facilityConflicts(array $resource, string $start, string $end, int $exclude): array
+    {
+        return $this->facilityCommitments($resource, $start, $end, $exclude);
+    }
+
+    public function facilityCommitments(array $resource, string $start, ?string $end = null, int $exclude = 0): array
+    {
+        $groups = ResourceConflictPolicy::groups($resource);
+        $sql = 'SELECT r.start_datetime, r.end_datetime, i.quantity FROM '
+            . $this->db->prefixTable('reservation_items') . ' i JOIN '
+            . $this->db->prefixTable('reservations') . ' r ON r.id = i.reservation_id JOIN '
+            . $this->db->prefixTable('resources') . ' booked ON booked.id = i.resource_id'
+            . " WHERE r.status = 'approved' AND r.end_datetime > ? AND r.id <> ?";
+        $bindings = [$start, $exclude];
+        if ($end !== null) {
+            $sql .= ' AND r.start_datetime < ?';
+            array_splice($bindings, 2, 0, [$end]);
+        }
+        $sql .= ' AND (booked.id = ?';
+        $bindings[] = (int) $resource['id'];
+        foreach ($groups as $group) {
+            $sql .= ' OR booked.conflict_group = ? OR booked.conflict_group_alt = ?';
+            $bindings[] = $group;
+            $bindings[] = $group;
+        }
+
+        return $this->db->query($sql . ') FOR UPDATE', $bindings)->getResultArray();
+    }
+
     public static function peak(array $allocations, string $start, ?string $end = null): int
     {
         $events = [];
@@ -54,8 +83,24 @@ class AvailabilityService
         if ($quantity < 1 || $quantity > $stock || ($resource['resource_type'] === 'facility' && $quantity !== 1)) {
             throw new DomainException('Invalid requested quantity for a selected resource.');
         }
-        if (self::peak($this->allocations((int) $resource['id'], $start, $end, $exclude), $start, $end) + $quantity > $stock) {
+        $allocations = $resource['resource_type'] === 'facility'
+            ? $this->facilityConflicts($resource, $start, $end, $exclude)
+            : $this->allocations((int) $resource['id'], $start, $end, $exclude);
+        if (self::peak($allocations, $start, $end) + $quantity > $stock) {
             throw new DomainException('A selected resource has insufficient availability for this schedule.');
         }
+    }
+
+    public function remaining(array $resource, string $start, string $end, int $exclude = 0): int
+    {
+        if ($resource['deleted_at'] !== null || $resource['status'] !== 'available') {
+            return 0;
+        }
+        $stock = $resource['resource_type'] === 'facility' ? 1 : (int) $resource['quantity'];
+        $allocations = $resource['resource_type'] === 'facility'
+            ? $this->facilityConflicts($resource, $start, $end, $exclude)
+            : $this->allocations((int) $resource['id'], $start, $end, $exclude);
+
+        return max(0, $stock - self::peak($allocations, $start, $end));
     }
 }

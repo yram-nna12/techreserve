@@ -78,4 +78,24 @@ final class PaymentGatewayResponseTest extends TestCase
             }
         }
     }
+
+    public function testRejectsPaidTimestampsThatConflictWithGatewayStatus(): void
+    {
+        $status = $this->expected() + [
+            'gateway_transaction_id' => 'gw_0123456789abcdef0123456789abcdef',
+            'status' => 'failed',
+            'paid_at' => '2026-11-17 15:45:00',
+            'expires_at' => '2026-11-17 16:00:00',
+        ];
+
+        try {
+            PaymentGatewayResponse::status(
+                json_encode(['data' => $status], JSON_THROW_ON_ERROR),
+                $this->expected()
+            );
+            $this->fail('A failed payment with a paid timestamp was accepted.');
+        } catch (UnexpectedValueException) {
+            $this->assertTrue(true);
+        }
+    }
 }

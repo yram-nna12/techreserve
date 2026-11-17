@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\ResourceModel;
 use App\Services\ResourceService;
 use App\Services\ResourceBookingGuard;
+use App\Services\ResourceCatalog;
 use DomainException;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -76,7 +77,7 @@ class ResourceController extends BaseController
     {
         $model = new ResourceModel();
         $filters = [];
-        foreach (['q', 'resource_type', 'status'] as $field) {
+        foreach (['q', 'resource_type', 'category', 'status'] as $field) {
             $value = $this->request->getGet($field);
             $filters[$field] = is_string($value) ? mb_substr(trim($value), 0, 150) : '';
         }
@@ -88,23 +89,47 @@ class ResourceController extends BaseController
         }
         if ($filters['q'] !== '') {
             $model->groupStart()->like('name', $filters['q'])->orLike('description', $filters['q'])
-                ->orLike('location', $filters['q'])->groupEnd();
+                ->orLike('location', $filters['q'])->orLike('catalog_group', $filters['q']);
+            if ($admin) {
+                $model->orLike('inventory_identifier', $filters['q']);
+            }
+            $model->groupEnd();
         }
-        foreach (['resource_type', 'status'] as $field) {
+        foreach (['resource_type', 'category', 'status'] as $field) {
             if ($filters[$field] !== '') {
                 $model->where($field, $filters[$field]);
             }
         }
-        $resources = $model->orderBy('name', 'ASC')->orderBy('id', 'ASC')->paginate(10);
+        $model->orderBy('name', 'ASC')->orderBy('id', 'ASC');
+        if ($admin) {
+            $resources = $model->paginate(10);
+            $pager = $model->pager;
+        } else {
+            $allResources = ResourceCatalog::borrowerGroups($model->findAll());
+            $page = max(1, (int) ($this->request->getGet('page') ?? 1));
+            $pager = service('pager');
+            $pager->makeLinks($page, 10, count($allResources));
+            $resources = array_slice($allResources, ($page - 1) * 10, 10);
+        }
         return view('resources/index', [
             'title' => $admin ? 'Manage resources' : 'Resource catalog',
-            'admin' => $admin, 'resources' => $resources, 'filters' => $filters, 'pager' => $model->pager,
+            'admin' => $admin, 'resources' => $resources, 'filters' => $filters, 'pager' => $pager,
         ]);
     }
 
     private function details(int $id, bool $admin): string
     {
         $resource = $this->find($id);
+        if (!$admin && $resource['resource_type'] === 'equipment' && !empty($resource['catalog_group'])) {
+            $members = (new ResourceModel())->where('resource_type', 'equipment')
+                ->where('catalog_group', $resource['catalog_group'])->where('category', $resource['category'])
+                ->where('rate_per_hour', $resource['rate_per_hour'])->where('status', $resource['status'])->findAll();
+            $resource['name'] = $resource['catalog_group'];
+            $resource['quantity'] = array_sum(array_map(static fn(array $item): int => (int) $item['quantity'], $members));
+            $resource['location'] = count(array_unique(array_filter(array_column($members, 'location')))) > 1
+                ? 'Multiple locations' : ($resource['location'] ?: null);
+            $resource['inventory_count'] = count($members);
+        }
         return view('resources/show', ['title' => $resource['name'], 'resource' => $resource, 'admin' => $admin]);
     }
 
@@ -119,10 +144,19 @@ class ResourceController extends BaseController
 
     private function form(?array $resource, array $errors = [])
     {
+        $resource ??= [
+            'resource_type' => 'facility', 'category' => 'Facility', 'quantity' => '1',
+            'rate_per_hour' => '', 'status' => 'available', 'catalog_group' => '',
+            'inventory_identifier' => '', 'conflict_group' => null, 'conflict_group_alt' => null,
+        ];
+        $resource['conflict_groups'] = implode(', ', array_filter([
+            $resource['conflict_group'] ?? null,
+            $resource['conflict_group_alt'] ?? null,
+        ]));
         return view('resources/form', [
             'title' => isset($resource['id']) ? 'Edit resource' : 'Create resource',
-            'resource' => $resource ?? ['resource_type' => 'facility', 'quantity' => '1', 'rate_per_hour' => '0.00', 'status' => 'available'],
-            'errors' => $errors,
+            'resource' => $resource, 'errors' => $errors,
+            'pricing' => config('ResourcePricing'),
         ]);
     }
 
@@ -136,7 +170,6 @@ class ResourceController extends BaseController
             }
             return $this->response->setStatusCode(422)->setBody($this->form($resource, $errors));
         }
-        $model = new ResourceModel();
         if ($existing) {
             try {
                 (new ResourceBookingGuard())->change((int) $existing['id'], $data);
@@ -145,7 +178,11 @@ class ResourceController extends BaseController
                 return $this->response->setStatusCode(422)->setBody($this->form($data + ['id' => $existing['id']], ['booking' => $exception->getMessage()]));
             }
         } else {
-            $saved = $model->insert($data);
+            try {
+                $saved = (new ResourceBookingGuard())->create($data);
+            } catch (DomainException $exception) {
+                return $this->response->setStatusCode(422)->setBody($this->form($data, ['resource' => $exception->getMessage()]));
+            }
         }
         if ($saved === false) {
             return $this->response->setStatusCode(503)->setBody('The resource could not be saved. Please try again later.');

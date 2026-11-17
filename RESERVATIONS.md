@@ -12,11 +12,25 @@ Use existing student and separately provisioned office accounts. The dashboard
 and catalog provide navigation. All interfaces are local; nothing is deployed.
 
 Select one or more operational resources, equipment quantities, purpose, and
-one shared start/end interval. Preview availability and estimated fees, then
-submit for administrator review. Preview does not reserve stock or store a
-reservation. Submission rechecks the current resource rates and availability.
-The submitted request is pending and immutable. Editing requires cancellation
-and a new submission. Borrowers can see/cancel only their own pending requests.
+one shared start/end interval. Matching equipment is shown as one catalog
+choice; the server allocates the requested quantity across its individual
+inventory records. Preview availability and estimated fees, then submit for
+administrator review. Preview does not reserve stock or store a reservation.
+Submission rechecks current rates and availability and requires a valid
+teacher-signed PDF, JPG, or PNG request form. The file is MIME-checked, size
+limited (10 MiB by default; configurable up to 100 MiB), stored privately under
+`writable/private/reservation-forms` with a random name, and linked to both the
+reservation and submitting borrower. Set
+`reservationDocuments.maxFileSizeBytes` in the local `.env` to override the
+default (valid range: 1 KiB–100 MiB).
+
+The latest form remains pending until an administrator manually reviews it;
+the application does not attempt to authenticate handwritten signatures.
+Administrators can securely download, accept, or reject the latest form.
+Rejection requires a reason. A borrower can upload a first form for a legacy
+pending reservation without one, or replace a rejected form; each new version
+returns to pending review. Borrowers can see/cancel only their own pending
+requests.
 
 Administrators filter the queue by status and Manila schedule dates, view the
 borrower's identity/academic information, and approve or reject pending requests.
@@ -71,8 +85,10 @@ The transaction wrapper uses transaction-local READ COMMITTED and explicit
 current/locking reads. It locks resource rows in ascending numeric ID order,
 then checks actors and reservation state inside the transaction. Submission,
 approval, cancellation, completion, and reservation-sensitive resource changes
-use these same resource mutexes. Header/items commit together or roll back.
-MySQL deadlocks/lock timeouts receive bounded retries; other errors do not.
+use these same resource mutexes. Locks include matching equipment catalog
+records and facility conflict groups. Reservation header, items, and document
+metadata commit together or roll back. MySQL deadlocks/lock timeouts receive
+bounded retries; other errors do not.
 
 Submission forms carry a UUID v4 idempotency key. A repeated identical request
 from the same borrower returns the original reservation; different payloads or
@@ -97,8 +113,17 @@ there is no silent cancellation. No historical reservation is deleted.
 Existing resource/reservation foreign-key indexes are retained rather than
 duplicated. Before modifying schema, migration preflight refuses duplicate
 legacy resource lines; it never merges or deletes them. No completed migration
-is edited. Apply only new migrations using `php spark migrate` once MySQL is
-running. Do not reset/recreate databases.
+is edited.
+
+Step 19 adds two further additive migrations:
+
+- `2026-11-17-235100_AddResourceCatalogAndConflicts` adds category, catalog
+  grouping, optional unique inventory identifiers, and facility conflict groups.
+- `2026-11-17-235200_CreateReservationDocuments` creates private document
+  metadata/history and its reservation, borrower, and reviewer foreign keys.
+
+Both migrations have been created but **not run**. Apply only after separate
+database approval; do not reset/recreate databases.
 
 ## Tests
 
@@ -146,11 +171,11 @@ The suite used random test ports. For the normal browser URLs, first free 8080
 through the usual approved local service procedure and run the existing
 development launcher. This implementation did not stop Oracle or change ports.
 
-## Payment boundary
+## Approval and payment boundary
 
-Approved is an allocation decision, not evidence of payment. The interface says
-so explicitly. No payments, gateway calls, webhooks, or notifications are created.
-The next phase must link payment attempts to the stored reservation ID/amount/
-currency, use idempotent confirmations, and define approved-unpaid expiry,
-payment retry and refund/cancellation policies. This phase has no automatic
-payment-expiry release or pending-request expiration job.
+An administrator can approve a reservation only after accepting its latest
+signed form and rechecking availability. Payment initiation and resuming an
+existing payment attempt both independently require an approved reservation
+and an accepted latest form. Form review and payment-state updates do not make
+external calls inside their database transactions. A paid reservation still
+cannot be borrower-cancelled because refunds are not implemented.
