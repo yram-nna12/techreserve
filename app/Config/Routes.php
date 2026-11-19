@@ -11,6 +11,8 @@ $routes->post(
 );
 
 $routes->group('', ['filter' => 'nostore'], static function (RouteCollection $routes) {
+    $routes->get('verification-assistance', 'VerificationAssistanceController::form', ['filter' => 'csrf']);
+    $routes->post('verification-assistance', 'VerificationAssistanceController::submit', ['filter' => ['csrf', 'assistanceattempts']]);
     $routes->get('register', 'AuthController::registerForm', ['filter' => 'csrf']);
     $routes->post('register', 'AuthController::register', ['filter' => ['csrf', 'authattempts:register']]);
     $routes->get('login', 'AuthController::loginForm', ['filter' => 'csrf']);

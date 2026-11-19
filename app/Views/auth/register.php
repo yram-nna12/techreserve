@@ -12,6 +12,7 @@
     <input id="password_confirm" name="password_confirm" type="password" required minlength="12" maxlength="72" autocomplete="new-password">
     <button type="submit">Create student account</button>
 </form>
+<?php if (session()->getFlashdata('assistance_available')): ?><p class="muted">Unable to verify your Student Records status? <a href="<?= site_url('verification-assistance') ?>">Request Verification Assistance</a>.</p><?php endif ?>
 <p class="switch">Already registered? <a href="<?= site_url('login') ?>">Log in</a></p>
 <p class="muted fine">Facilities Office accounts are provisioned separately. Administrator registration is not available here.</p>
 <?= $this->endSection() ?>

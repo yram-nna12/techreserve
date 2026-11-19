@@ -22,8 +22,18 @@ class AuthController extends BaseController
             (new RegistrationService())->register($studentId, $this->input('password'), $this->input('password_confirm'));
         } catch (DomainException $exception) {
             // Never use withInput(): it would retain submitted passwords in the session.
-            return redirect()->to(site_url('register'))->with('error', $exception->getMessage())
+            $message = $exception->getMessage();
+            $redirect = redirect()->to(site_url('register'))->with('error', $message)
                 ->with('student_id', $studentId);
+            if (in_array($message, [
+                'Student record not found. Check your student ID.',
+                'Only currently enrolled students can register.',
+                'Student Records returned incomplete identity details. Please contact the Facilities Office.',
+            ], true)) {
+                $redirect->with('error', 'We could not verify your Student Records status.')
+                    ->with('assistance_available', true);
+            }
+            return $redirect;
         }
 
         return redirect()->to(site_url('login'))->with('success', 'Account created. You can now log in.');

@@ -26,6 +26,7 @@ class Filters extends BaseFilters
     public array $aliases = [
         'authenticated' => \App\Filters\Authenticated::class,
         'authattempts'  => \App\Filters\AuthAttempts::class,
+        'assistanceattempts' => \App\Filters\AssistanceAttempts::class,
         'nostore'       => \App\Filters\NoStore::class,
         'csrf'          => CSRF::class,
         'toolbar'       => \App\Filters\AuthSafeToolbar::class,

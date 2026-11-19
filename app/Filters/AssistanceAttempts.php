@@ -1,0 +1,3 @@
+<?php
+namespace App\Filters; use CodeIgniter\Filters\FilterInterface; use CodeIgniter\HTTP\RequestInterface; use CodeIgniter\HTTP\ResponseInterface;
+class AssistanceAttempts implements FilterInterface { public function before(RequestInterface $r,$a=null){$t=service('throttler');$id=$r->getPost('student_id');$key='assistance_'.hash('sha256',$r->getIPAddress().'|'.(is_string($id)?strtolower(trim($id)):''));if(!$t->check($key,3,3600))return service('response')->setStatusCode(429)->setBody('Too many assistance requests. Please try again later.');}public function after(RequestInterface $r,ResponseInterface $s,$a=null){} }
