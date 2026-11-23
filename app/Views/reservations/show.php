@@ -102,12 +102,11 @@ $duration = intdiv((new DateTimeImmutable($reservation['end_datetime'], new Date
     <?php if (!$admin && $reservation['status'] === 'approved' && $formAccepted && $validPaymentTotal && !$hasPaidPayment && !$pendingPayment): ?>
         <form method="post" action="<?= site_url('borrower/reservations/' . $reservation['id'] . '/payments') ?>" class="payment-form">
             <?= csrf_field() ?>
-            <label for="payment_method">Mock payment method</label>
-            <select id="payment_method" name="payment_method" required>
-                <option value="gcash">Mock GCash</option>
-                <option value="card">Mock Credit / Debit Card</option>
-                <option value="bank_transfer">Mock Bank Transfer</option>
-            </select>
+            <fieldset class="payment-methods"><legend>Choose a demo payment method</legend>
+                <label><input type="radio" name="payment_method" value="gcash" checked><span class="material-symbols-outlined" aria-hidden="true">account_balance_wallet</span><span><strong>Mock GCash</strong><small>Mobile-wallet style demo checkout</small></span></label>
+                <label><input type="radio" name="payment_method" value="card"><span class="material-symbols-outlined" aria-hidden="true">credit_card</span><span><strong>Demo Credit / Debit Card</strong><small>Fictional test card details only</small></span></label>
+                <label><input type="radio" name="payment_method" value="bank_transfer"><span class="material-symbols-outlined" aria-hidden="true">account_balance</span><span><strong>Demo Bank Transfer</strong><small>Fictional bank and account details only</small></span></label>
+            </fieldset>
             <p><button type="submit">Pay Now</button></p>
         </form>
     <?php elseif (!$admin && $pendingPayment): ?>

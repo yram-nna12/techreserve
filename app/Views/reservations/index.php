@@ -21,7 +21,7 @@
         <td><a href="<?= esc($detailUrl, 'attr') ?>">#<?= (int) $reservation['id'] ?></a></td>
         <td><?= esc(BookingRules::display($reservation['start_datetime'])) ?></td>
         <td><?= esc(BookingRules::display($reservation['end_datetime'])) ?></td>
-        <td><?= esc(ucfirst($reservation['status'])) ?></td>
+        <td><span class="status-badge <?= esc($reservation['status'], 'attr') ?>"><?= esc(ucfirst($reservation['status'])) ?></span></td>
         <td><?= esc($reservation['currency']) ?> <?= esc($reservation['total_amount']) ?></td>
     </tr>
 <?php endforeach ?>

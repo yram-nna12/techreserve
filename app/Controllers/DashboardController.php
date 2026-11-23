@@ -22,6 +22,6 @@ class DashboardController extends BaseController
     {
         $user = (new UserModel())->select('id, student_id, full_name, email, role, program, program_code, specialization, department')
             ->find(session()->get('user_id'));
-        return view('auth/dashboard', ['title' => $title, 'user' => $user]);
+        return view('auth/dashboard', ['title' => $title, 'user' => $user, 'admin' => $user['role'] === 'admin']);
     }
 }

@@ -4,6 +4,10 @@ use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
 $routes->get('/', 'Home::index');
+$routes->get('about', 'Home::information/about');
+$routes->get('contact', 'Home::information/contact');
+$routes->get('terms', 'Home::information/terms');
+$routes->get('privacy', 'Home::information/privacy');
 $routes->post(
     'api/v1/webhooks/payments',
     'PaymentWebhookController::receive',
@@ -18,8 +22,8 @@ $routes->group('', ['filter' => 'nostore'], static function (RouteCollection $ro
     $routes->get('login', 'AuthController::loginForm', ['filter' => 'csrf']);
     $routes->post('login', 'AuthController::login', ['filter' => ['csrf', 'authattempts:login']]);
     $routes->post('logout', 'AuthController::logout', ['filter' => ['csrf', 'authenticated']]);
-    $routes->get('borrower/dashboard', 'DashboardController::borrower', ['filter' => ['authenticated:borrower', 'csrf']]);
-    $routes->get('admin/dashboard', 'DashboardController::admin', ['filter' => ['authenticated:admin', 'csrf']]);
+    $routes->get('borrower/dashboard', 'BorrowerDashboardController::index', ['filter' => ['authenticated:borrower', 'csrf']]);
+    $routes->get('admin/dashboard', 'AdminDashboardController::index', ['filter' => ['authenticated:admin', 'csrf']]);
 });
 
 $routes->group('admin/resources', ['filter' => ['nostore', 'authenticated:admin', 'csrf']], static function (RouteCollection $routes) {

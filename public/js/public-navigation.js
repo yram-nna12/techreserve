@@ -1,0 +1,1 @@
+document.addEventListener('click', (event) => { const button=event.target.closest('.nav-toggle'); if(!button)return; const menu=document.getElementById(button.getAttribute('aria-controls')); const open=button.getAttribute('aria-expanded')==='true'; button.setAttribute('aria-expanded',String(!open)); menu.classList.toggle('open',!open); });

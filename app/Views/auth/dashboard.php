@@ -1,4 +1,4 @@
-<?= $this->extend('auth/layout') ?>
+<?= $this->extend('resources/layout') ?>
 <?= $this->section('content') ?>
 <p class="muted">Welcome, <?= esc($user['full_name']) ?>.</p>
 <span class="badge"><?= esc(ucfirst($user['role'])) ?> · Active account</span>

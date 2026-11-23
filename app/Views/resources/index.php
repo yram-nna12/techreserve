@@ -18,7 +18,7 @@
 <td><?= esc($resource['name']) ?></td><td><?= esc($resource['category'] ?? 'General') ?></td><td><?= esc(ucfirst($resource['resource_type'])) ?></td>
     <td><?= esc($resource['location'] ?: 'Not specified') ?></td>
 <td><?= (int) $resource['quantity'] ?> <?= $resource['resource_type'] === 'facility' ? 'space' : 'units' ?><?php if ($resource['resource_type'] === 'equipment' && !$admin && ($resource['inventory_count'] ?? 1) > 1): ?> across <?= (int) $resource['inventory_count'] ?> records<?php endif ?><?php if ($resource['capacity'] !== null): ?> / <?= (int) $resource['capacity'] ?> people<?php endif ?></td>
-    <td><?= esc($resource['rate_per_hour']) ?> / hour</td><td><?= esc(ucfirst($resource['status'])) ?></td>
+    <td><?= esc($resource['rate_per_hour']) ?> / hour</td><td><span class="status-badge <?= esc($resource['status'], 'attr') ?>"><?= esc(ucfirst($resource['status'])) ?></span></td>
     <td><a href="<?= site_url(($admin ? 'admin' : 'borrower') . '/resources/' . $resource['id']) ?>">View</a><?php if ($admin): ?> <a href="<?= site_url('admin/resources/' . $resource['id'] . '/edit') ?>">Edit</a><?php endif ?></td>
 </tr>
 <?php endforeach ?>

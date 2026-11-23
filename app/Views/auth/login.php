@@ -1,13 +1,3 @@
-<?= $this->extend('auth/layout') ?>
-<?= $this->section('content') ?>
-<p class="muted">Log in with your student ID and TechReserve password.</p>
-<form method="post" action="<?= site_url('login') ?>">
-    <?= csrf_field() ?>
-    <label for="student_id">Student ID</label>
-    <input id="student_id" name="student_id" required maxlength="30" autocomplete="username" value="<?= esc(session()->getFlashdata('student_id') ?? '', 'attr') ?>">
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password" required maxlength="72" autocomplete="current-password">
-    <button type="submit">Log in</button>
-</form>
-<p class="switch">New to TechReserve? <a href="<?= site_url('register') ?>">Create a student account</a></p>
+<?= $this->extend('auth/layout') ?><?= $this->section('content') ?>
+<section class="login-layout"><aside class="login-brand" aria-label="TechReserve introduction"><img class="gear-watermark" src="<?= base_url('assets/images/branding/techreserve-icon.png') ?>" alt="" aria-hidden="true"><div class="brand-content"><a class="wordmark" href="<?= site_url('login') ?>"><span>Tech</span><strong>Reserve</strong></a><h1>Your Campus Resources, One Click Away</h1><p>A centralized platform for FEU Tech students to reserve campus facilities and equipment with ease.</p><ul><li>Convenient Reservations</li><li>Secure Student Verification</li><li>Streamlined Payment Process</li></ul></div></aside><section class="login-panel" aria-labelledby="page-title"><div class="login-form-wrap"><img class="login-mark" src="<?= base_url('assets/images/branding/techreserve-icon.png') ?>" alt="" aria-hidden="true"><h1 id="page-title">Welcome Back!</h1><p class="subtitle">Sign in to manage your campus reservations.</p><?php if ($error = session()->getFlashdata('error')): ?><div class="alert error" role="alert"><?= esc($error) ?></div><?php endif ?><?php if ($success = session()->getFlashdata('success')): ?><div class="alert success" role="status"><?= esc($success) ?></div><?php endif ?><form method="post" action="<?= site_url('login') ?>"><?= csrf_field() ?><label for="student_id">Account ID</label><input id="student_id" name="student_id" required maxlength="30" autocomplete="username" value="<?= esc(session()->getFlashdata('student_id') ?? '', 'attr') ?>" aria-describedby="account-id-help"><small id="account-id-help">Enter your Student ID or assigned Admin Account ID.</small><label for="password">Password</label><div class="password-control"><input id="password" name="password" type="password" required maxlength="72" autocomplete="current-password"><button class="password-toggle" type="button" data-password-toggle="password" aria-label="Show password"><span class="material-symbols-outlined" aria-hidden="true">visibility</span></button></div><p class="forgot-password">Forgot Password? <span>Contact the Facilities Office.</span></p><button class="primary-button" type="submit">LOG IN</button></form><div class="auth-divider"></div><p class="account-switch">Don't have an account yet? <a href="<?= site_url('register') ?>">Register Now</a></p></div></section></section>
 <?= $this->endSection() ?>
