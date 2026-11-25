@@ -55,7 +55,7 @@ class ResourceController extends BaseController
 
     public function archiveForm(int $id)
     {
-        return view('resources/archive', ['title' => 'Archive resource', 'resource' => $this->find($id)]);
+        return view('resources/archive', ['title' => 'Archive resource', 'admin' => true, 'resource' => $this->find($id)]);
     }
 
     public function archive(int $id)
@@ -100,7 +100,8 @@ class ResourceController extends BaseController
                 $model->where($field, $filters[$field]);
             }
         }
-        $model->orderBy('name', 'ASC')->orderBy('id', 'ASC');
+        if ($admin) $model->orderBy('created_at', 'DESC')->orderBy('id', 'DESC');
+        else $model->orderBy('name', 'ASC')->orderBy('id', 'ASC');
         if ($admin) {
             $resources = $model->paginate(10);
             $pager = $model->pager;
@@ -111,8 +112,8 @@ class ResourceController extends BaseController
             $pager->makeLinks($page, 10, count($allResources));
             $resources = array_slice($allResources, ($page - 1) * 10, 10);
         }
-        return view('resources/index', [
-            'title' => $admin ? 'Manage resources' : 'Resource catalog',
+        return view($admin ? 'resources/admin_index' : 'resources/index', [
+            'title' => $admin ? 'Resource Management' : 'Resource catalog',
             'admin' => $admin, 'resources' => $resources, 'filters' => $filters, 'pager' => $pager,
         ]);
     }
@@ -130,7 +131,7 @@ class ResourceController extends BaseController
                 ? 'Multiple locations' : ($resource['location'] ?: null);
             $resource['inventory_count'] = count($members);
         }
-        return view('resources/show', ['title' => $resource['name'], 'resource' => $resource, 'admin' => $admin]);
+        return view($admin ? 'resources/admin_show' : 'resources/show', ['title' => $resource['name'], 'resource' => $resource, 'admin' => $admin]);
     }
 
     private function find(int $id): array
@@ -154,7 +155,7 @@ class ResourceController extends BaseController
             $resource['conflict_group_alt'] ?? null,
         ]));
         return view('resources/form', [
-            'title' => isset($resource['id']) ? 'Edit resource' : 'Create resource',
+            'title' => isset($resource['id']) ? 'Edit resource' : 'Create resource', 'admin' => true,
             'resource' => $resource, 'errors' => $errors,
             'pricing' => config('ResourcePricing'),
         ]);

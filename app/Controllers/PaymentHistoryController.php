@@ -23,8 +23,16 @@ final class PaymentHistoryController extends BaseController
             if (in_array($filters['status'], ['pending','paid','failed','cancelled','expired','refunded'], true)) $query->where('p.payment_status', $filters['status']);
             if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $filters['date'])) $query->where('DATE(p.created_at)', $filters['date']);
         }
-        return view('payments/history', ['title' => $admin ? 'Payment transactions' : 'My payment history', 'admin' => $admin,
-            'payments' => $query->orderBy('p.created_at', 'DESC')->orderBy('p.id', 'DESC')->limit(100)->get()->getResultArray(), 'filters' => $filters]);
+        if ($admin) {
+            $total = (clone $query)->countAllResults();
+            $pageValue = $this->request->getGet('page');
+            $page = is_string($pageValue) && ctype_digit($pageValue) ? max(1, (int) $pageValue) : 1;
+            $page = min($page, max(1, (int) ceil($total / 20)));
+            $pager = service('pager');
+            $links = $pager->makeLinks($page, 20, $total, 'admin_records');
+            return view('payments/admin_history', ['title'=>'Payment Transactions','admin'=>true,'payments'=>$query->orderBy('p.created_at','DESC')->orderBy('p.id','DESC')->limit(20,($page-1)*20)->get()->getResultArray(),'filters'=>$filters,'pager'=>$links,'total'=>$total,'page'=>$page]);
+        }
+        return view('payments/history', ['title'=>'My payment history','admin'=>false,'payments'=>$query->orderBy('p.created_at','DESC')->orderBy('p.id','DESC')->limit(100)->get()->getResultArray(),'filters'=>$filters]);
     }
 
     public function borrowerReceipt(int $paymentId): string { return $this->receipt($paymentId, false); }
@@ -40,6 +48,6 @@ final class PaymentHistoryController extends BaseController
         if (!$payment) throw PageNotFoundException::forPageNotFound('Payment receipt not found.');
         $payload = json_decode((string) ($payment['request_payload'] ?? ''), true);
         $items = is_array($payload['rented_items'] ?? null) ? $payload['rented_items'] : [];
-        return view('payments/receipt', ['title' => 'Payment receipt', 'admin' => $admin, 'payment' => $payment, 'items' => $items]);
+        return view($admin ? 'payments/admin_receipt' : 'payments/receipt', ['title' => 'Payment receipt', 'admin' => $admin, 'payment' => $payment, 'items' => $items]);
     }
 }

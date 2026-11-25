@@ -95,7 +95,48 @@ class ReservationController extends BaseController
 
     public function adminIndex()
     {
-        return $this->listing(true);
+        return $this->adminListing();
+    }
+
+    private function adminListing()
+    {
+        $db = \Config\Database::connect();
+        $model = new ReservationModel();
+        $model->select('reservations.*, users.full_name, users.student_id')->join('users', 'users.id = reservations.user_id');
+        $query = $this->request->getGet('q');
+        $q = is_string($query) ? mb_substr(trim($query), 0, 100) : '';
+        $rawStatus = $this->request->getGet('status');
+        $status = is_string($rawStatus) && in_array($rawStatus, ['pending','approved','rejected','cancelled','completed'], true) ? $rawStatus : '';
+        if ($status !== '') $model->where('reservations.status', $status);
+        if ($q !== '') {
+            $resourceMatches = $db->table('reservation_items ri')->select('ri.reservation_id')->join('resources resource_search', 'resource_search.id = ri.resource_id')->like('resource_search.name', $q);
+            $model->groupStart()->like('users.full_name', $q)->orLike('users.student_id', $q)->orWhereIn('reservations.id', $resourceMatches);
+            $reference = preg_replace('/^(?:RES-?|#)/i', '', $q);
+            if (ctype_digit($reference) && strlen($reference) <= 10) $model->orWhere('reservations.id', (int) $reference);
+            $model->groupEnd();
+        }
+        $filters = ['q'=>$q, 'status'=>$status, 'from'=>'', 'to'=>''];
+        foreach (['from','to'] as $field) {
+            $value = $this->request->getGet($field);
+            if ($value === null || $value === '') continue;
+            $date = is_string($value) && preg_match('/\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z/', $value) ? DateTimeImmutable::createFromFormat('!Y-m-d', $value, new DateTimeZone(config('Booking')->timezone)) : false;
+            if (!$date || $date->format('Y-m-d') !== $value) return $this->response->setStatusCode(422)->setBody('Use valid Manila schedule dates.');
+            $filters[$field] = $value;
+            $bound = ($field === 'to' ? $date->modify('+1 day') : $date)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+            $model->where($field === 'from' ? 'reservations.end_datetime >' : 'reservations.start_datetime <', $bound);
+        }
+        if ($filters['from'] !== '' && $filters['to'] !== '' && $filters['from'] > $filters['to']) return $this->response->setStatusCode(422)->setBody('The schedule-through date must not precede the schedule-from date.');
+        $reservations = $model->orderBy('reservations.created_at','DESC')->orderBy('reservations.id','DESC')->paginate(10);
+        $ids = array_column($reservations, 'id');
+        $resources = []; $payments = [];
+        if ($ids !== []) {
+            foreach ($db->table('reservation_items ri')->select('ri.reservation_id, resources.name')->join('resources','resources.id = ri.resource_id')->whereIn('ri.reservation_id',$ids)->orderBy('resources.name')->get()->getResultArray() as $item) $resources[$item['reservation_id']][] = $item['name'];
+            foreach ($db->table('payments')->select('reservation_id, payment_status')->whereIn('reservation_id',$ids)->orderBy('created_at','DESC')->orderBy('id','DESC')->get()->getResultArray() as $payment) {
+                $id = $payment['reservation_id'];
+                if (!isset($payments[$id]) || $payment['payment_status'] === 'paid') $payments[$id] = $payment['payment_status'];
+            }
+        }
+        return view('reservations/admin_index', ['title'=>'Reservation records','admin'=>true,'reservations'=>$reservations,'pager'=>$model->pager,'filters'=>$filters,'resources'=>$resources,'payments'=>$payments]);
     }
 
     private function listing(bool $admin)
@@ -171,7 +212,7 @@ class ReservationController extends BaseController
         $documentService = new ReservationDocumentService($db);
         $documents = $admin ? $documentService->allForReservation($id) : [];
         $latestDocument = $admin ? ($documents[0] ?? null) : $documentService->latestForReservation($id);
-        return view('reservations/show', [
+        return view($admin ? 'reservations/admin_show' : 'reservations/show', [
             'title' => 'Reservation #' . $id, 'admin' => $admin, 'reservation' => $record,
             'items' => $items, 'borrower' => $borrower, 'reviewer' => $reviewer,
             'payments' => (new PaymentService($db))->forReservation($id),

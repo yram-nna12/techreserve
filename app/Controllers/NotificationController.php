@@ -19,6 +19,26 @@ final class NotificationController extends BaseController
             throw PageNotFoundException::forPageNotFound('Notifications not found.');
         }
 
+        if ($role === 'admin') {
+            $filter = $this->request->getGet('filter');
+            $filter = is_string($filter) && in_array($filter, ['all', 'unread', 'read'], true) ? $filter : 'all';
+            $query = \Config\Database::connect()->table('notifications n')->select('n.*, r.id AS existing_reservation_id')
+                ->join('reservations r', 'r.id = n.reservation_id', 'left')->where('n.user_id', $userId);
+            if ($filter !== 'all') $query->where('n.is_read', $filter === 'read' ? 1 : 0);
+            $total = (clone $query)->countAllResults();
+            $requestedPage = $this->request->getGet('page');
+            $page = is_string($requestedPage) && ctype_digit($requestedPage) ? max(1, (int) $requestedPage) : 1;
+            $page = min($page, max(1, (int) ceil($total / 10)));
+            $pager = service('pager');
+            return view('notifications/admin_index', [
+                'title' => 'Notifications', 'admin' => true, 'filter' => $filter,
+                'notifications' => $query->orderBy('n.created_at', 'DESC')->orderBy('n.id', 'DESC')->limit(10, ($page - 1) * 10)->get()->getResultArray(),
+                'unreadCount' => $notifications->unreadCount($userId), 'total' => $total,
+                'pager' => $pager->only(['filter'])->makeLinks($page, 10, $total, 'admin_records'),
+                'notificationWritesEnabled' => config('Notifications')->enabled,
+            ]);
+        }
+
         return view('notifications/index', [
             'title' => 'Notifications',
             'admin' => $role === 'admin',

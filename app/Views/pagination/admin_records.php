@@ -1,0 +1,6 @@
+<?php $pager->setSurroundCount(2); ?>
+<nav aria-label="Pagination"><ul class="pagination admin-pagination">
+    <li><?php if ($pager->hasPreviousPage()): ?><a href="<?= esc($pager->getPreviousPage(), 'attr') ?>" aria-label="Previous page"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></a><?php else: ?><span class="pagination-disabled" aria-disabled="true" aria-label="Previous page unavailable"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></span><?php endif ?></li>
+    <?php foreach ($pager->links() as $link): ?><li><?php if ($link['active']): ?><span class="pagination-current" aria-current="page"><?= esc($link['title']) ?></span><?php else: ?><a href="<?= esc($link['uri'], 'attr') ?>" aria-label="Page <?= esc($link['title'], 'attr') ?>"><?= esc($link['title']) ?></a><?php endif ?></li><?php endforeach ?>
+    <li><?php if ($pager->hasNextPage()): ?><a href="<?= esc($pager->getNextPage(), 'attr') ?>" aria-label="Next page"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></a><?php else: ?><span class="pagination-disabled" aria-disabled="true" aria-label="Next page unavailable"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></span><?php endif ?></li>
+</ul></nav>

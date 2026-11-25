@@ -3,9 +3,10 @@
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($title) ?> | TechReserve</title>
-    <link rel="stylesheet" href="<?= base_url('css/resources.css?v=20261123-3') ?>">
+    <link rel="stylesheet" href="<?= base_url('css/resources.css?v=20261125-4') ?>">
     <link rel="stylesheet" href="<?= base_url('css/fonts.css?v=20261123-3') ?>">
     <?= $this->renderSection('styles') ?>
+    <?php if (!empty($admin)): ?><link rel="stylesheet" href="<?= base_url('css/admin-status-colors.css?v=1') ?>"><link rel="stylesheet" href="<?= base_url('css/admin-interactions.css?v=2') ?>"><?php endif ?>
 </head>
 <body class="<?= !empty($admin) ? 'admin-portal' : 'borrower-portal' ?>">
 <?php $portalUser = (new \App\Models\UserModel())->select('full_name, role')->find((int) session()->get('user_id')); ?>
@@ -36,7 +37,7 @@
     </aside>
     <main class="portal-main">
 <?php endif ?>
-<?php if (!str_contains(strtolower((string) $title), 'dashboard')): ?><h1 class="portal-title"><?= esc($title) ?></h1><?php endif ?>
+<?php if (!str_contains(strtolower((string) $title), 'dashboard') && !( !empty($admin) && in_array($title, ['Resource Management', 'Notifications'], true))): ?><h1 class="portal-title"><?= esc($title) ?></h1><?php endif ?>
 <?php if ($error = session()->getFlashdata('error')): ?><p class="alert error" role="alert"><?= esc($error) ?></p><?php endif ?>
 <?php if ($success = session()->getFlashdata('success')): ?><p class="alert success" role="status"><?= esc($success) ?></p><?php endif ?>
 <?= $this->renderSection('content') ?>

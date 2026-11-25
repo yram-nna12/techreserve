@@ -1,0 +1,36 @@
+/* Interaction styles are scoped to the Facilities Office portal. */
+.admin-portal :is(button,.button,.record-icon,.receipt-action,.dashboard-notifications,.portal-sidebar nav a,.notification-filters a){transition:background-color 160ms ease,color 160ms ease,border-color 160ms ease,box-shadow 160ms ease,filter 160ms ease}
+.admin-portal .portal-main :is(button:not(:disabled),.button){cursor:pointer}
+.admin-portal .portal-main :is(button,.button):focus-visible,.admin-portal .portal-sidebar :is(a,button):focus-visible,.admin-portal .portal-main a:focus-visible{outline:3px solid #87cda4;outline-offset:2px}
+.admin-portal .portal-main :is(input:not(:disabled),select:not(:disabled),textarea:not(:disabled)){transition:border-color 160ms ease,box-shadow 160ms ease}
+.admin-portal .portal-main :is(input,select,textarea):focus-visible{outline:3px solid #b9e4cf;outline-offset:1px;border-color:#23804c}
+.admin-portal .portal-main :is(button,.button):disabled{opacity:.55;cursor:not-allowed;box-shadow:none;filter:none}
+.admin-portal .portal-main :is(button:not(:disabled),.button):not(.secondary):not(.danger):not(.record-icon):not(.mark-all):not(.notification-row-actions button):not([name=decision][value=reject]):not([name=action][value=reject]):not([name=action][value=cancel]):active{background-color:#0b4930;box-shadow:none;filter:none}
+.admin-portal .portal-main :is(.danger,[name=decision][value=reject],[name=action][value=reject],[name=action][value=cancel]){background:#9f3030;color:#fff}
+.admin-portal .portal-main :is(.danger,[name=decision][value=reject],[name=action][value=reject],[name=action][value=cancel]):active{background:#742020;filter:none}
+.admin-portal .portal-main :is(.secondary,.mark-all):not(:disabled):active{background:#dbeee2;color:#125a3b;filter:none}
+.admin-portal .portal-main :is(.record-icon,.receipt-action,.dashboard-notifications):active{background:#d7eddf;color:#0b4930;filter:none}
+.admin-portal .portal-sidebar :is(nav a:not(.active),.sidebar-logout):active{background:#dbeee2;color:#125a3b;filter:none}
+.admin-portal .admin-pagination a:active{color:#0b4930;background:transparent;filter:none}
+@media (hover:hover){
+ .admin-portal .portal-main :is(button:not(:disabled),.button):not(.secondary):not(.danger):not(.record-icon):not(.mark-all):not(.notification-row-actions button):not([name=decision][value=reject]):not([name=action][value=reject]):not([name=action][value=cancel]):hover{background-color:#0f5437;box-shadow:0 2px 5px #173e3026;filter:none}
+ .admin-portal .portal-main :is(.danger,[name=decision][value=reject],[name=action][value=reject],[name=action][value=cancel]):not(:disabled):hover{background:#802323;box-shadow:0 2px 5px #60202026;filter:none}
+ .admin-portal .portal-main :is(.secondary,.mark-all):not(:disabled):hover{background:#e6f3ea;color:#125a3b;border-color:#77ad8d;filter:none}
+ .admin-portal .portal-main :is(.record-icon,.receipt-action,.dashboard-notifications):hover{background:#e6f3ea;color:#125a3b;filter:none}
+ .admin-portal .portal-main a:not(.button):not(.record-icon):not(.receipt-action):not(.dashboard-notifications):not(.admin-pagination a):hover{color:#125a3b;text-decoration:underline}
+ .admin-portal .portal-main :is(input:not(:disabled),select:not(:disabled),textarea:not(:disabled)):hover{border-color:#78a98b}
+ .admin-portal .notification-filters a:not([aria-current=page]):hover{background:#eef6f1;color:#12633f}
+}
+@media (prefers-reduced-motion:reduce){.admin-portal :is(button,.button,.record-icon,.receipt-action,.dashboard-notifications,.portal-sidebar nav a,.notification-filters a,input,select,textarea){transition:none}}
+
+/* Compact dashboard controls; the notification link has no visible container. */
+.admin-portal .analytics-toolbar form{align-items:center;gap:8px}
+.admin-portal .analytics-toolbar label{font-size:.78rem;font-weight:500;white-space:nowrap}
+.admin-portal .analytics-toolbar select,.admin-portal .analytics-toolbar button{height:36px;min-height:0;font-size:.8125rem;font-weight:500;line-height:1.2}
+.admin-portal .analytics-toolbar select{width:auto;min-width:0;padding:5px 28px 5px 8px}
+.admin-portal .analytics-toolbar button{padding:5px 14px}
+.admin-portal .portal-main .dashboard-notifications{width:40px;height:40px;border:0;border-radius:0;background:transparent;box-shadow:none;color:#12633f;text-decoration:none;transition:color 160ms ease}
+.admin-portal .portal-main .dashboard-notifications .material-symbols-outlined{font-size:24px}
+.admin-portal .portal-main .dashboard-notifications:active{background:transparent;box-shadow:none;color:#0b4930;text-decoration:none}
+@media (hover:hover){.admin-portal .portal-main .dashboard-notifications:hover{background:transparent;box-shadow:none;color:#32a65e;text-decoration:none}}
+@media (prefers-reduced-motion:reduce){.admin-portal .portal-main .dashboard-notifications{transition:none}}

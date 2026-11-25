@@ -6,13 +6,13 @@ $now = gmdate('Y-m-d H:i:s');
 $duration = intdiv((new DateTimeImmutable($reservation['end_datetime'], new DateTimeZone('UTC')))->getTimestamp()
     - (new DateTimeImmutable($reservation['start_datetime'], new DateTimeZone('UTC')))->getTimestamp(), 60);
 ?>
-<p><strong>Status: <?= esc(ucfirst($reservation['status'])) ?></strong></p>
+<p>Status: <?php if($admin): ?><span class="status-badge <?= esc($reservation['status'],'attr') ?>"><?= esc(ucfirst($reservation['status'])) ?></span><?php else: ?><strong><?= esc(ucfirst($reservation['status'])) ?></strong><?php endif ?></p>
 <p><?= esc(BookingRules::display($reservation['start_datetime'])) ?> to <?= esc(BookingRules::display($reservation['end_datetime'])) ?>, Asia/Manila (<?= $duration ?> minutes).</p>
 <p class="description">Purpose: <?= esc($reservation['purpose']) ?></p>
 <section aria-labelledby="request-form-heading">
     <h2 id="request-form-heading">Teacher-signed request form</h2>
     <?php if ($latestDocument): ?>
-        <p>Latest form status: <strong><?= esc(ucfirst($latestDocument['status'])) ?></strong></p>
+        <p>Latest form status: <?php if($admin): ?><span class="status-badge <?= esc($latestDocument['status'],'attr') ?>"><?= esc(ucfirst($latestDocument['status'])) ?></span><?php else: ?><strong><?= esc(ucfirst($latestDocument['status'])) ?></strong><?php endif ?></p>
         <?php if ($admin): ?>
             <?php foreach ($documents as $document): ?>
                 <p>
@@ -75,7 +75,7 @@ $duration = intdiv((new DateTimeImmutable($reservation['end_datetime'], new Date
                 <tr>
                     <td><?= esc($payment['transaction_reference'] ?? 'Pending reference') ?></td>
                     <td><?= esc(ucwords(str_replace('_', ' ', $payment['payment_method'] ?? ''))) ?></td>
-                    <td><?= esc(ucfirst($payment['payment_status'])) ?></td>
+                    <td><?php if($admin): ?><span class="status-badge <?= esc($payment['payment_status'],'attr') ?>"><?= esc(ucfirst($payment['payment_status'])) ?></span><?php else: ?><?= esc(ucfirst($payment['payment_status'])) ?><?php endif ?></td>
                     <td><?= esc($payment['currency']) ?> <?= esc($payment['amount']) ?></td>
                     <td><?= esc($payment['gateway_transaction_id'] ?? 'Not received yet') ?></td>
                 </tr>

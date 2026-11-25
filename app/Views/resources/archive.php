@@ -1,10 +1,2 @@
-<?= $this->extend('resources/layout') ?>
-<?= $this->section('content') ?>
-<p>Archive <strong><?= esc($resource['name']) ?></strong>?</p>
-<p>It will disappear from the catalog and management lists. Its database record and any reservation references will remain stored.</p>
-<form method="post" action="<?= site_url('admin/resources/' . $resource['id'] . '/archive') ?>">
-    <?= csrf_field() ?>
-    <label class="checkbox"><input type="checkbox" name="confirm_archive" value="yes" required> I confirm that this resource should be archived.</label>
-    <p><button type="submit" class="danger">Archive resource</button> <a href="<?= site_url('admin/resources/' . $resource['id']) ?>">Cancel</a></p>
-</form>
-<?= $this->endSection() ?>
+<?= $this->extend('resources/layout') ?><?= $this->section('styles') ?><link rel="stylesheet" href="<?= base_url('css/admin-workspace.css?v=1') ?>"><?= $this->endSection() ?><?= $this->section('content') ?>
+<section class="workspace-card archive-card"><h2>Archive <?= esc($resource['name']) ?>?</h2><p>Resource #<?= (int)$resource['id'] ?> will disappear from the catalog and management lists. Its database record and reservation references will remain stored.</p><form method="post" action="<?= site_url('admin/resources/'.$resource['id'].'/archive') ?>"><?= csrf_field() ?><label class="checkbox"><input type="checkbox" name="confirm_archive" value="yes" required> I confirm that this resource should be archived.</label><div class="workspace-actions"><a class="button secondary" href="<?= site_url('admin/resources/'.$resource['id']) ?>">Cancel</a><button type="submit" class="danger">Confirm archive</button></div></form></section><?= $this->endSection() ?>

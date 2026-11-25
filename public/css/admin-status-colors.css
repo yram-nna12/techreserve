@@ -1,0 +1,10 @@
+.admin-portal{--status-pending:#d49c20;--status-approved:#23804c;--status-rejected:#be4848;--status-completed:#4479a9;--status-cancelled:#7b7185;--method-gcash:#4479a9;--method-card:#23804c;--method-bank-transfer:#d49c20;--resource-facility:#4479a9;--resource-equipment:#7b7185}
+.admin-portal .status-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:#edf0f2;color:#465760;font-size:.72rem;font-weight:500;line-height:1.4;box-shadow:none}
+.admin-portal .status-badge.pending{background:#fff3d8;color:#745000}
+.admin-portal .status-badge.approved,.admin-portal .status-badge.accepted,.admin-portal .status-badge.paid,.admin-portal .status-badge.available{background:#dff4e6;color:#145d37}
+.admin-portal .status-badge.rejected,.admin-portal .status-badge.failed{background:#fde3e3;color:#8a2525}
+.admin-portal .status-badge.completed{background:#e4effa;color:#245981}
+.admin-portal .status-badge.cancelled{background:#eee9f2;color:#594c66}
+.admin-portal .status-badge.expired,.admin-portal .status-badge.refunded,.admin-portal .status-badge.unavailable,.admin-portal .status-badge.maintenance,.admin-portal .status-badge.unpaid{background:#edf0f2;color:#465760}
+.admin-portal .status-dot.pending{background:var(--status-pending)}.admin-portal .status-dot.approved{background:var(--status-approved)}.admin-portal .status-dot.rejected{background:var(--status-rejected)}.admin-portal .status-dot.completed{background:var(--status-completed)}.admin-portal .status-dot.cancelled{background:var(--status-cancelled)}
+.admin-portal .category-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:.72rem;font-weight:500;line-height:1.4;background:#edf0f2;color:#465760}.admin-portal .category-badge.gcash,.admin-portal .category-badge.facility{background:#e4effa;color:#245981}.admin-portal .category-badge.card{background:#dff4e6;color:#145d37}.admin-portal .category-badge.bank_transfer{background:#fff3d8;color:#745000}.admin-portal .category-badge.equipment{background:#eee9f2;color:#594c66}
