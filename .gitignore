@@ -60,6 +60,7 @@ Vagrantfile
 /writable/uploads/*
 !/writable/uploads/index.html
 /writable/private/
+/writable/eligibility-nonces/
 
 /writable/debugbar/*
 !/writable/debugbar/index.html

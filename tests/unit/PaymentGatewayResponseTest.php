@@ -44,7 +44,7 @@ final class PaymentGatewayResponseTest extends TestCase
             $this->expected()
         )['status']);
 
-        foreach (['pending', 'failed', 'expired'] as $outcome) {
+        foreach (['pending', 'failed', 'cancelled', 'expired'] as $outcome) {
             $status['status'] = $outcome;
             $status['paid_at'] = null;
             $this->assertSame($outcome, PaymentGatewayResponse::status(
@@ -52,6 +52,19 @@ final class PaymentGatewayResponseTest extends TestCase
                 $this->expected()
             )['status']);
         }
+    }
+
+    public function testResponseSignatureBindsBodyAndRequestNonce(): void
+    {
+        $body = '{"data":{"status":"pending"}}';
+        $nonce = str_repeat('a', 64);
+        $secret = 'synthetic-test-key';
+        $signature = 'v1=' . hash_hmac('sha256', "techreserve-response-v1\n" . $nonce . "\n" . $body, $secret);
+        $this->assertTrue(PaymentGatewayResponse::hasValidSignature($body, $nonce, $signature, $secret));
+        $this->assertFalse(PaymentGatewayResponse::hasValidSignature($body . ' ', $nonce, $signature, $secret));
+        $this->assertFalse(PaymentGatewayResponse::hasValidSignature($body, str_repeat('b', 64), $signature, $secret));
+        $this->assertFalse(PaymentGatewayResponse::hasValidSignature($body, $nonce, '', $secret));
+        $this->assertFalse(PaymentGatewayResponse::hasValidSignature($body, $nonce, $signature, ''));
     }
 
     public function testRejectsMismatchedAmountAndUntrustedCheckoutHost(): void

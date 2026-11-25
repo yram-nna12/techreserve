@@ -1,0 +1,20 @@
+.borrower-portal .student-resource-detail { display: grid; gap: 18px; }
+.borrower-portal .student-resource-back { display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: #17633b; text-decoration: none; font-weight: 500; }
+.borrower-portal .student-resource-back:hover { text-decoration: underline; }
+.borrower-portal .student-resource-back:focus-visible { outline: 2px solid #17633b; outline-offset: 3px; }
+.borrower-portal .student-resource-heading { display: flex; align-items: center; gap: 14px; }
+.borrower-portal .student-resource-heading h1 { margin: 0 0 6px; }
+.borrower-portal .student-resource-icon { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 48px; border-radius: 12px; color: #17633b; background: #e8f3eb; }
+.borrower-portal .student-resource-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: #59645e; }
+.borrower-portal .student-resource-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.borrower-portal .student-resource-card { min-width: 0; padding: 20px; border: 1px solid #e7ece9; border-radius: 10px; background: #fff; box-shadow: 0 2px 10px rgba(20, 42, 28, .05); }
+.borrower-portal .student-resource-card h2 { margin: 0 0 12px; font-size: 1rem; }
+.borrower-portal .student-resource-value { margin: 0; color: #174b2d; font-size: 1.3rem; font-weight: 600; }
+.borrower-portal .student-resource-value small { font-size: .8rem; font-weight: 400; color: #59645e; }
+.borrower-portal .student-resource-information dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; margin: 0; }
+.borrower-portal .student-resource-information dt { color: #68736d; font-size: .85rem; }
+.borrower-portal .student-resource-information dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.borrower-portal .student-resource-description { grid-column: 1 / -1; white-space: pre-line; }
+.borrower-portal .student-resource-note { display: flex; align-items: center; gap: 8px; margin: 0; color: #59645e; }
+.borrower-portal .student-resource-detail > .button { justify-self: start; }
+@media (max-width: 600px) { .borrower-portal .student-resource-summary, .borrower-portal .student-resource-information dl { grid-template-columns: 1fr; } .borrower-portal .student-resource-description { grid-column: auto; } }

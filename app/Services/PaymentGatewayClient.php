@@ -14,7 +14,7 @@ final class PaymentGatewayClient implements PaymentStatusProviderInterface
         try {
             return PaymentGatewayResponse::initiation($response, $payload, $config->baseUrl);
         } catch (Throwable $exception) {
-            log_message('warning', 'Payment gateway initiation response could not be verified ({exceptionClass}).', ['exceptionClass' => $exception::class]);
+            log_message('warning', 'Payment gateway initiation response rejected: {reason}', ['reason' => $exception->getMessage()]);
             throw new PaymentGatewayException(
                 'The payment gateway response could not be verified. The attempt remains unresolved.',
                 false,
@@ -33,7 +33,7 @@ final class PaymentGatewayClient implements PaymentStatusProviderInterface
         try {
             return PaymentGatewayResponse::status($response, $expected);
         } catch (Throwable $exception) {
-            log_message('warning', 'Payment gateway status response could not be verified ({exceptionClass}).', ['exceptionClass' => $exception::class]);
+            log_message('warning', 'Payment gateway status response rejected: {reason}', ['reason' => $exception->getMessage()]);
             throw new PaymentGatewayException(
                 'The payment gateway status response could not be verified.',
                 false,
@@ -46,7 +46,7 @@ final class PaymentGatewayClient implements PaymentStatusProviderInterface
     private function request(string $method, string $path, ?array $payload = null): string
     {
         $config = config('PaymentGateway');
-        if ($config->apiKey === '' || !in_array(parse_url($config->baseUrl, PHP_URL_SCHEME), ['http', 'https'], true)
+        if ($config->apiKey === '' || $config->webhookSecret === '' || !in_array(parse_url($config->baseUrl, PHP_URL_SCHEME), ['http', 'https'], true)
             || parse_url($config->baseUrl, PHP_URL_HOST) === null) {
             throw new PaymentGatewayException('The payment gateway is not configured.', false, 'not_configured');
         }
@@ -57,10 +57,12 @@ final class PaymentGatewayClient implements PaymentStatusProviderInterface
             'http_errors' => false,
             'allow_redirects' => false,
         ]);
+        $nonce = bin2hex(random_bytes(32));
         $options = [
             'headers' => [
                 'Accept' => 'application/json',
                 'X-API-Key' => $config->apiKey,
+                'X-Payment-Response-Nonce' => $nonce,
             ],
         ];
         if ($payload !== null) {
@@ -90,6 +92,11 @@ final class PaymentGatewayClient implements PaymentStatusProviderInterface
             );
         }
 
-        return $result->getBody();
+        $body = $result->getBody();
+        if (!PaymentGatewayResponse::hasValidSignature($body, $nonce, $result->getHeaderLine('X-Payment-Response-Signature'), $config->webhookSecret)) {
+            log_message('warning', 'Payment gateway response signature was missing or invalid.');
+            throw new PaymentGatewayException('The payment gateway response could not be authenticated.', false, 'invalid_signature');
+        }
+        return $body;
     }
 }

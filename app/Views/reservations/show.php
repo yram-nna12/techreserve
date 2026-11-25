@@ -102,10 +102,10 @@ $duration = intdiv((new DateTimeImmutable($reservation['end_datetime'], new Date
     <?php if (!$admin && $reservation['status'] === 'approved' && $formAccepted && $validPaymentTotal && !$hasPaidPayment && !$pendingPayment): ?>
         <form method="post" action="<?= site_url('borrower/reservations/' . $reservation['id'] . '/payments') ?>" class="payment-form">
             <?= csrf_field() ?>
-            <fieldset class="payment-methods"><legend>Choose a demo payment method</legend>
-                <label><input type="radio" name="payment_method" value="gcash" checked><span class="material-symbols-outlined" aria-hidden="true">account_balance_wallet</span><span><strong>Mock GCash</strong><small>Mobile-wallet style demo checkout</small></span></label>
-                <label><input type="radio" name="payment_method" value="card"><span class="material-symbols-outlined" aria-hidden="true">credit_card</span><span><strong>Demo Credit / Debit Card</strong><small>Fictional test card details only</small></span></label>
-                <label><input type="radio" name="payment_method" value="bank_transfer"><span class="material-symbols-outlined" aria-hidden="true">account_balance</span><span><strong>Demo Bank Transfer</strong><small>Fictional bank and account details only</small></span></label>
+            <fieldset class="payment-methods"><legend>Choose a payment method</legend>
+                <label><input type="radio" name="payment_method" value="gcash" checked><span class="material-symbols-outlined" aria-hidden="true">account_balance_wallet</span><span><strong>GCash</strong><small>Pay using a mobile wallet</small></span></label>
+                <label><input type="radio" name="payment_method" value="card"><span class="material-symbols-outlined" aria-hidden="true">credit_card</span><span><strong>Credit / Debit Card</strong><small>Pay using a card</small></span></label>
+                <label><input type="radio" name="payment_method" value="bank_transfer"><span class="material-symbols-outlined" aria-hidden="true">account_balance</span><span><strong>Bank Transfer</strong><small>Pay using a bank transfer</small></span></label>
             </fieldset>
             <p><button type="submit">Pay Now</button></p>
         </form>
@@ -130,7 +130,7 @@ $duration = intdiv((new DateTimeImmutable($reservation['end_datetime'], new Date
     <?php elseif (!$admin && $reservation['status'] !== 'approved'): ?>
         <p>Payment is available only after administrator approval.</p>
     <?php elseif (!$admin && $reservation['status'] === 'approved' && !$validPaymentTotal && !$hasPaidPayment && !$pendingPayment): ?>
-        <p>This reservation total cannot be processed by the mock gateway.</p>
+        <p>This reservation total cannot be processed by the payment gateway.</p>
     <?php endif ?>
 </section>
 <?php if ($reservation['reviewed_at']): ?><h2>Latest administrator decision</h2><p><?= esc($reviewer['full_name'] ?? 'Facilities Office') ?>, <?= esc(BookingRules::display($reservation['reviewed_at'])) ?> (Manila).</p><p class="description"><?= esc($reservation['admin_remarks'] ?? 'No remarks.') ?></p><?php endif ?>

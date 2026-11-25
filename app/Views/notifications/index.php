@@ -1,6 +1,6 @@
 <?= $this->extend('resources/layout') ?>
 <?= $this->section('content') ?>
-<p><?= (int) $unreadCount ?> unread notification(s).</p>
+<p><?= $unreadCount === 0 ? 'No unread notifications.' : (int)$unreadCount . ' unread notification' . ($unreadCount === 1 ? '.' : 's.') ?></p>
 <?php if (!$notificationWritesEnabled): ?>
     <p class="alert" role="status">Notification changes are disabled pending database approval. This page is read-only.</p>
 <?php elseif ($unreadCount > 0): ?>
@@ -21,9 +21,8 @@
                     <span class="notification-state"><?= $read ? 'Read' : 'Unread' ?></span>
                 </div>
                 <p><?= esc($notification['message']) ?></p>
-                <time datetime="<?= esc($notification['created_at'] ?? '', 'attr') ?>">
-                    <?= esc($notification['created_at'] ?? 'Date unavailable') ?>
-                </time>
+                <?php $date = !empty($notification['created_at']) ? (new DateTimeImmutable($notification['created_at'], new DateTimeZone('UTC')))->setTimezone(new DateTimeZone(config('Booking')->timezone)) : null; ?>
+                <?php if ($date): ?><time datetime="<?= esc($date->format(DateTimeInterface::ATOM), 'attr') ?>" title="<?= esc($notification['created_at'], 'attr') ?> UTC"><?= esc($date->format('M j, Y · g:i A')) ?> Manila</time><?php else: ?><span class="notification-state">Date unavailable</span><?php endif ?>
                 <?php if ($notification['reservation_id'] !== null): ?>
                     <p><a href="<?= site_url(($admin ? 'admin' : 'borrower') . '/reservations/' . (int) $notification['reservation_id']) ?>">View reservation</a></p>
                 <?php endif ?>

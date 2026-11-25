@@ -32,7 +32,7 @@ final class PaymentService
     public function initiate(int $borrowerId, int $reservationId, string $method): array
     {
         if (!in_array($method, ['card', 'gcash', 'bank_transfer'], true)) {
-            throw new DomainException('Choose Mock Card, GCash, or Bank Transfer.');
+            throw new DomainException('Choose Credit / Debit Card, GCash, or Bank Transfer.');
         }
 
         $attempt = $this->transactions->run(function () use ($borrowerId, $reservationId, $method): array {
@@ -49,7 +49,8 @@ final class PaymentService
                 $reservation['status'],
                 $reservation['total_amount'],
                 $reservation['currency'],
-                $reservation['form_status']
+                $reservation['form_status'],
+                $reservation['start_datetime']
             );
 
             $borrower = $this->db->query(
@@ -67,7 +68,7 @@ final class PaymentService
             )->getResultArray();
             foreach ($payments as $payment) {
                 if ($payment['payment_status'] === 'paid') {
-                    throw new DomainException('This reservation has already been paid.');
+                    return ['already_paid' => $payment];
                 }
             }
 
@@ -89,7 +90,8 @@ final class PaymentService
                 'approved',
                 $reservation['total_amount'],
                 $reservation['currency'],
-                $reservation['form_status']
+                $reservation['form_status'],
+                $reservation['start_datetime']
             );
             $items = $this->db->query(
                 'SELECT CASE WHEN resources.catalog_group IS NULL THEN resources.name ELSE resources.catalog_group END AS name,'
@@ -152,6 +154,10 @@ final class PaymentService
                 ],
             ];
         });
+
+        if (isset($attempt['already_paid'])) {
+            return $attempt['already_paid'];
+        }
 
         $gatewayData = $this->gateway->initiate($attempt['payload']);
         $this->saveGatewayInitiation($attempt['id'], $gatewayData);

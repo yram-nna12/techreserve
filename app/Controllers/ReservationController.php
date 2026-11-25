@@ -170,7 +170,7 @@ class ReservationController extends BaseController
         }
         return view('reservations/index', [
             'title' => $admin ? 'Reservation queue' : 'My reservations', 'admin' => $admin,
-            'reservations' => $model->orderBy('start_datetime', 'DESC')->orderBy('id', 'DESC')->paginate(10),
+            'reservations' => $model->orderBy('created_at', 'DESC')->orderBy('id', 'DESC')->paginate(10),
             'pager' => $model->pager, 'filters' => $filters,
         ]);
     }
@@ -212,7 +212,7 @@ class ReservationController extends BaseController
         $documentService = new ReservationDocumentService($db);
         $documents = $admin ? $documentService->allForReservation($id) : [];
         $latestDocument = $admin ? ($documents[0] ?? null) : $documentService->latestForReservation($id);
-        return view($admin ? 'reservations/admin_show' : 'reservations/show', [
+        return view($admin ? 'reservations/admin_show' : 'reservations/borrower_show', [
             'title' => 'Reservation #' . $id, 'admin' => $admin, 'reservation' => $record,
             'items' => $items, 'borrower' => $borrower, 'reviewer' => $reviewer,
             'payments' => (new PaymentService($db))->forReservation($id),

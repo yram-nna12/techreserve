@@ -1,0 +1,40 @@
+.borrower-portal .reservation-detail-page { display: grid; gap: 16px; }
+.borrower-portal .reservation-back { display: inline-flex; align-items: center; gap: 8px; width: fit-content; color: #12633f; text-decoration: none; font-size: .85rem; font-weight: 500; }
+.borrower-portal .reservation-back:hover { color: #248257; text-decoration: underline; }
+.borrower-portal .reservation-back:focus-visible { outline: 2px solid #12633f; outline-offset: 3px; }
+.borrower-portal .reservation-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.borrower-portal .reservation-heading h1 { margin: 0; font-size: 1.3rem; }
+.borrower-portal .reservation-heading p { margin: 4px 0; font-size: .86rem; }
+.borrower-portal .reservation-heading small { color: #536b78; }
+.borrower-portal .reservation-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.borrower-portal .reservation-attachment { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #e1e9e4; border-radius: 7px; }
+.borrower-portal .reservation-attachment > .material-symbols-outlined { color: #12633f; }
+.borrower-portal .reservation-attachment > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.borrower-portal .reservation-attachment strong { font-size: .84rem; font-weight: 500; }
+.borrower-portal .reservation-attachment .status-badge { display: inline-block; margin-top: 5px; }
+.borrower-portal .reservation-attachment .button { text-decoration: none; }
+.borrower-portal .reservation-resource-table { min-width: 530px; }
+.borrower-portal .reservation-resource-table :is(th,td), .borrower-portal .reservation-transactions :is(th,td) { padding: 10px 12px; vertical-align: middle; }
+.borrower-portal .reservation-resource-table :is(th,td):first-child { width: 46%; }
+.borrower-portal .reservation-resource-table :is(th,td):nth-child(2) { text-align: center; }
+.borrower-portal .reservation-resource-table :is(th,td):nth-child(n+3) { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.borrower-portal .reservation-detail-page .table-wrap { box-shadow: none; max-width: 100%; overflow-x: auto; }
+.borrower-portal .reservation-payment-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px 18px; margin: 16px 0; font-size: .83rem; }
+.borrower-portal .reservation-payment-summary small { margin: 0 0 5px; }
+.borrower-portal .reservation-payment h3 { font-size: .9rem; margin: 16px 0 10px; }
+.borrower-portal .reservation-transactions { min-width: 760px; }
+.borrower-portal .reservation-transactions :is(th,td):nth-child(4) { text-align: right; white-space: nowrap; }
+.borrower-portal .reservation-notice { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 6px; }
+.borrower-portal .reservation-notice .material-symbols-outlined { font-size: 19px; }
+.borrower-portal .reservation-notice.info { color: #31556a; background: #edf5f9; }
+.borrower-portal .reservation-notice.pending { color: #795000; background: #fff6de; }
+.borrower-portal .reservation-notice.success { color: #155b36; background: #e9f6ed; }
+.borrower-portal .reservation-notice.failure { color: #8b2929; background: #fceeee; }
+.borrower-portal .recovery-notice { align-items: flex-start; }
+.borrower-portal .recovery-notice p { margin: 4px 0 10px; }
+.borrower-portal .recovery-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.borrower-portal .recovery-actions form { margin: 0; }
+@media (max-width: 480px) { .borrower-portal .recovery-actions { flex-direction: column; align-items: flex-start; } }
+@media (max-width: 600px) { .borrower-portal .reservation-attachment { flex-wrap: wrap; } .borrower-portal .reservation-attachment .button { margin-left: 34px; } }
+
+.borrower-portal .payment-methods label{transition:border-color .18s,background-color .18s}.borrower-portal .payment-methods label:hover{border-color:#48996b;background:#f5faf7}.borrower-portal .payment-methods label:has(input:checked){border-color:#12633f;background:#edf7f0}.borrower-portal .payment-methods label:has(input:focus-visible){outline:2px solid #12633f;outline-offset:2px}

@@ -45,7 +45,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .payment-panel h2 { margin-top: 0; }
 .payment-form { max-width: 420px; margin-top: 18px; }
 .payment-methods { display: grid; gap: 10px; padding: 0; border: 0; }.payment-methods legend { margin-bottom: 10px; font-weight: 600; }.payment-methods label { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 9px; padding: 10px; border: 1px solid #d8e2e8; border-radius: 7px; background: #fff; cursor: pointer; }.payment-methods input { width: auto; margin: 0; }.payment-methods .material-symbols-outlined { color: #12633f; }.payment-methods strong,.payment-methods small { display: block; }.payment-methods small { font-size: .7rem; font-weight: 400; }
-.portal-main > dl, .portal-main > section:not(.admin-dashboard):not(.borrower-dashboard), .portal-main > form:not(.filters):not(.payment-form) { margin: 18px 0; padding: 20px; border-radius: 7px; background: #fff; box-shadow: 0 5px 16px #172d3c12; }
+.portal-main > dl, .portal-main > section:not(.admin-dashboard):not(.borrower-dashboard):not(.student-home), .portal-main > form:not(.filters):not(.payment-form):not(.reservation-request-form) { margin: 18px 0; padding: 20px; border-radius: 7px; background: #fff; box-shadow: 0 5px 16px #172d3c12; }
 .notification-list { display: grid; gap: 14px; }
 .notification-item { padding: 18px; border: 1px solid #d8e2e8; border-radius: 8px; background: #fff; box-shadow: 0 4px 14px #172d3c0d; }
 .notification-item.is-unread { border-left: 4px solid #12633f; background: #f8fbfb; }

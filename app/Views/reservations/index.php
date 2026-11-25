@@ -11,7 +11,7 @@
     <label>Status<select name="status"><option value="">All statuses</option><?php foreach (['pending', 'approved', 'rejected', 'cancelled', 'completed'] as $status): ?><option value="<?= $status ?>" <?= $filters['status'] === $status ? 'selected' : '' ?>><?= ucfirst($status) ?></option><?php endforeach ?></select></label>
     <label>Schedule from<input type="date" name="from" value="<?= esc($filters['from'], 'attr') ?>"></label>
     <label>Schedule through<input type="date" name="to" value="<?= esc($filters['to'], 'attr') ?>"></label>
-    <button type="submit">Filter</button><a href="<?= site_url(($admin ? 'admin' : 'borrower') . '/reservations') ?>">Clear</a>
+    <button type="submit">Filter</button><a class="button secondary" href="<?= site_url(($admin ? 'admin' : 'borrower') . '/reservations') ?>">Clear</a>
 </form>
 <?php if (!$reservations): ?><p>No reservations match.</p><?php else: ?>
 <div class="table-wrap"><table><thead><tr><th>Reservation</th><th>Start (Manila)</th><th>End (Manila)</th><th>Status</th><th>Total</th></tr></thead><tbody>
@@ -26,6 +26,6 @@
     </tr>
 <?php endforeach ?>
 </tbody></table></div>
-<?= $pager->links() ?>
+<?= $pager->links('default', 'admin_records') ?>
 <?php endif ?>
 <?= $this->endSection() ?>

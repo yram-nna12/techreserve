@@ -6,7 +6,15 @@ use UnexpectedValueException;
 
 final class PaymentGatewayResponse
 {
-    private const STATUSES = ['pending', 'paid', 'failed', 'expired'];
+    private const STATUSES = ['pending', 'paid', 'failed', 'cancelled', 'expired'];
+
+    public static function hasValidSignature(string $body, string $nonce, string $signature, string $secret): bool
+    {
+        if ($secret === '' || !preg_match('/\A[a-f0-9]{64}\z/', $nonce)) {
+            return false;
+        }
+        return hash_equals('v1=' . hash_hmac('sha256', "techreserve-response-v1\n" . $nonce . "\n" . $body, $secret), $signature);
+    }
 
     public static function initiation(string $body, array $expected, string $baseUrl): array
     {

@@ -8,6 +8,7 @@ $routes->get('about', 'Home::information/about');
 $routes->get('contact', 'Home::information/contact');
 $routes->get('terms', 'Home::information/terms');
 $routes->get('privacy', 'Home::information/privacy');
+$routes->post('api/v1/payments/eligibility', 'PaymentEligibilityController::check', ['filter' => 'nostore']);
 $routes->post(
     'api/v1/webhooks/payments',
     'PaymentWebhookController::receive',

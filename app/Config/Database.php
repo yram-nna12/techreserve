@@ -191,6 +191,7 @@ class Database extends Config
     {
         parent::__construct();
         $this->tests['hostname'] = (string) env('database.tests.hostname', '127.0.0.1');
+        $this->tests['port'] = (int) env('database.tests.port', 3306);
         $this->tests['username'] = (string) env('database.tests.username', '');
         $this->tests['password'] = (string) env('database.tests.password', '');
 

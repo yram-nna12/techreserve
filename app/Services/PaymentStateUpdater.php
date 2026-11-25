@@ -31,7 +31,7 @@ final class PaymentStateUpdater implements PaymentStateApplierInterface
     ): array {
         $result = $this->transactions->run(function () use ($reservationId, $paymentId, $gatewayData, $receipt): array {
             $reservation = $this->db->query(
-                'SELECT id, user_id FROM ' . $this->db->prefixTable('reservations') . ' WHERE id = ? FOR UPDATE',
+                'SELECT id, user_id, start_datetime FROM ' . $this->db->prefixTable('reservations') . ' WHERE id = ? FOR UPDATE',
                 [$reservationId]
             )->getRowArray();
             $payment = $this->db->query(
@@ -86,6 +86,14 @@ final class PaymentStateUpdater implements PaymentStateApplierInterface
                     throw new PaymentWebhookException(409, 'payment_state_conflict', 'The payment event conflicts with the saved payment state.');
                 }
                 throw $exception;
+            }
+
+            if ($payment['payment_status'] === 'pending' && $nextStatus === 'paid'
+                && (!is_string($gatewayData['paid_at'] ?? null) || !PaymentRules::paymentConfirmedBeforeDeadline($gatewayData['paid_at'], $reservation['start_datetime']))) {
+                if ($receipt !== null) {
+                    throw new PaymentWebhookException(409, 'payment_after_deadline', 'The payment confirmation is outside the payment period.');
+                }
+                throw new UnexpectedValueException('The payment confirmation is outside the payment period.');
             }
 
             $now = gmdate('Y-m-d H:i:s');
