@@ -30,7 +30,11 @@ final class NotificationService
 
     public function reservationSubmitted(int $reservationId, array $context): void
     {
-        $this->safelyPublish(fn(): array => $this->events->reservationSubmitted($reservationId, $context));
+        $this->safelyPublish(function () use ($reservationId, $context): array {
+            $event = $this->events->reservationSubmitted($reservationId, $context);
+            $event['academic_fixture'] = ($context['academic_fixture'] ?? false) === true;
+            return $event;
+        });
     }
 
     public function reservationStatusChanged(int $userId, int $reservationId, string $status, array $context): void
@@ -197,7 +201,7 @@ final class NotificationService
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
-            $email = $this->emailMessage($recipient, $event);
+            $email = !empty($event['academic_fixture']) ? null : $this->emailMessage($recipient, $event);
 
             try {
                 $this->store->createEvent($notification, $email);

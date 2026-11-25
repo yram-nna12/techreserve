@@ -64,7 +64,7 @@ class ReservationService
 
     private function user(int $id, string $role): array
     {
-        $user = $this->db->query('SELECT id, role, status FROM ' . $this->db->prefixTable('users') . ' WHERE id = ? FOR UPDATE', [$id])->getRowArray();
+        $user = $this->db->query('SELECT id, role, status, email, student_id FROM ' . $this->db->prefixTable('users') . ' WHERE id = ? FOR UPDATE', [$id])->getRowArray();
         if (!$user || $user['role'] !== $role || $user['status'] !== 'active') {
             throw new DomainException('An active ' . $role . ' account is required.');
         }
@@ -228,7 +228,7 @@ class ReservationService
         try {
             $result = $this->transactions->run(function () use ($borrowerId, $input, $key, $data, $storedDocument) {
                 $resources = $this->transactions->lockResources(array_keys($data['quantities']));
-                $this->user($borrowerId, 'borrower');
+                $borrower = $this->user($borrowerId, 'borrower');
                 $existing = $this->db->table('reservations')->where('submission_key', $key)->get()->getRowArray();
                 // Parse the payload for comparison even on replay, without enforcing "future" again.
                 if ($existing) {
@@ -297,6 +297,7 @@ class ReservationService
                         'schedule' => BookingRules::display($quote['start_datetime']) . ' to ' . BookingRules::display($quote['end_datetime']),
                         'amount' => $quote['total_amount'],
                         'currency' => $quote['currency'],
+                        'academic_fixture' => AcademicFixturePolicy::matches($borrower, $data['purpose'], $key),
                     ],
                 ];
             });

@@ -50,6 +50,17 @@ final class NotificationServiceTest extends TestCase
         $this->assertSame('admin', $store->recipients[8]['role']);
     }
 
+    public function testAcademicFixtureKeepsInAppNotificationWithoutQueuingEmail(): void
+    {
+        $store = new FakeNotificationStore([
+            8 => ['id' => 8, 'role' => 'admin', 'status' => 'active', 'email' => 'admin@example.test'],
+        ]);
+        $service = new NotificationService(store: $store, settings: $this->enabledSettings());
+        $service->reservationSubmitted(25, ['academic_fixture' => true]);
+        $this->assertCount(1, $store->notifications);
+        $this->assertCount(0, $store->emails);
+    }
+
     public function testReservationAndPaymentEventsAreStoredForTheirIntendedRecipients(): void
     {
         $store = new FakeNotificationStore([
